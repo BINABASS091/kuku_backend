@@ -1,0 +1,29 @@
+{% extends "subscriptions/emails/base_email.html" %}
+
+{% block title %}Subscription Renewal Confirmation{% endblock %}
+
+{% block header %}Your Subscription Has Been Renewed{% endblock %}
+
+{% block content %}
+    <p>Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},</p>
+    
+    <p>We're happy to let you know that your <strong>{{ subscription.sub_type.name }}</strong> subscription 
+    has been successfully renewed!</p>
+    
+    <div class="highlight-box" style="background-color: #f8f9fa; border-left: 4px solid #4CAF50; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0;">
+            <strong>New Expiration Date:</strong> {{ new_end_date|date:"F j, Y" }}<br>
+            <strong>Amount Paid:</strong> KSh {{ subscription.sub_type.cost|floatformat:2 }}
+        </p>
+    </div>
+    
+    <p>You can view your receipt and subscription details by clicking the button below:</p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{{ receipt_url|default:'#' }}" class="button">View Receipt</a>
+    </div>
+    
+    <p>Thank you for your continued trust in Smart Kuku. We're committed to helping you manage your poultry farm efficiently.</p>
+    
+    <p>If you have any questions about your subscription, feel free to reply to this email or contact our support team.</p>
+{% endblock %}

@@ -1,0 +1,27 @@
+Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},
+
+We encountered an issue while processing the payment for your {{ subscription.sub_type.name }} subscription.
+
+=== PAYMENT ISSUE ===================
+Payment could not be processed
+-----------------------------------
+Subscription: {{ subscription.sub_type.name }}
+Amount: KSh {{ subscription.sub_type.cost|floatformat:2 }}
+=====================================
+
+To avoid any interruption to your service, please update your payment method as soon as possible:
+
+Update Payment Method: {{ payment_url }}
+
+If you believe this is an error, please contact our support team for assistance.
+
+We'll automatically retry the payment in 24 hours. If the issue persists, your subscription may be suspended.
+
+Thank you for your prompt attention to this matter.
+
+Best regards,
+The Smart Kuku Team
+
+---
+© {% now "Y" %} Smart Kuku. All rights reserved.
+You're receiving this email because you have an account with Smart Kuku.

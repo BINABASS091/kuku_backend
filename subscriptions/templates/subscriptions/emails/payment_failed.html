@@ -1,0 +1,33 @@
+{% extends "subscriptions/emails/base_email.html" %}
+
+{% block title %}Payment Issue: Your Subscription{% endblock %}
+
+{% block header %}Payment Issue with Your Subscription{% endblock %}
+
+{% block content %}
+    <p>Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},</p>
+    
+    <p>We encountered an issue while processing the payment for your <strong>{{ subscription.sub_type.name }}</strong> subscription.</p>
+    
+    <div class="highlight-box" style="background-color: #fff3f3; border-left: 4px solid #f44336; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0 0 10px 0; font-weight: bold; color: #d32f2f;">
+            Payment could not be processed
+        </p>
+        <p style="margin: 0;">
+            <strong>Subscription:</strong> {{ subscription.sub_type.name }}<br>
+            <strong>Amount:</strong> KSh {{ subscription.sub_type.cost|floatformat:2 }}
+        </p>
+    </div>
+    
+    <p>To avoid any interruption to your service, please update your payment method as soon as possible.</p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{{ payment_url }}" class="button">Update Payment Method</a>
+    </div>
+    
+    <p>If you believe this is an error, please contact our support team for assistance.</p>
+    
+    <p>We'll automatically retry the payment in 24 hours. If the issue persists, your subscription may be suspended.</p>
+    
+    <p>Thank you for your prompt attention to this matter.</p>
+{% endblock %}

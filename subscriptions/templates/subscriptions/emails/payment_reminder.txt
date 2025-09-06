@@ -1,0 +1,19 @@
+Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},
+
+This is a friendly reminder that your {{ subscription.sub_type.name }} subscription 
+will expire on {{ renewal_date|date:"F j, Y" }}.
+
+To continue enjoying uninterrupted access to all features, please renew your subscription before it expires.
+
+Renew your subscription here: {{ payment_url }}
+
+If you have any questions or need assistance, our support team is here to help.
+
+Thank you for being a valued Smart Kuku customer!
+
+Best regards,
+The Smart Kuku Team
+
+---
+© {% now "Y" %} Smart Kuku. All rights reserved.
+You're receiving this email because you have an account with Smart Kuku.

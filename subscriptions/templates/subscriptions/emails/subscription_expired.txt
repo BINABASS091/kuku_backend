@@ -1,0 +1,20 @@
+Hello {{ farmer.user.get_full_name|default:farmer.user.email }},
+
+We hope this message finds you well. We wanted to let you know that your {{ subscription.sub_type.name }} 
+subscription expired on {{ expiration_date|date:"F j, Y" }}.
+
+As a result, you may have lost access to some premium features. To continue enjoying all the benefits of Smart Kuku, 
+we encourage you to renew your subscription.
+
+Renew your subscription here: {{ renewal_url }}
+
+If you have any questions about your subscription or need assistance, please don't hesitate to contact our support team.
+
+We value your business and hope to continue serving you!
+
+Best regards,
+The Smart Kuku Team
+
+---
+© {% now "Y" %} Smart Kuku. All rights reserved.
+You're receiving this email because you have an account with Smart Kuku.

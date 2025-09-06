@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: smartkuku_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smartkuku_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    command: >
+      sh -c "
+      python manage.py wait_for_db &&
+      celery -A config worker --loglevel=info
+      "
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - smartkuku_network
+    restart: unless-stopped
+
+  celery_beat:
+    build: .
+    command: >
+      sh -c "
+      python manage.py wait_for_db &&
+      celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      "
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - celery_worker
+    networks:
+      - smartkuku_network
+    restart: unless-stopped
+
+networks:
+  smartkuku_network:
+    driver: bridge
+
+volumes:
+  redis_data:

@@ -1,0 +1,25 @@
+{% extends "subscriptions/emails/base_email.html" %}
+
+{% block title %}Renewal Reminder: Your Subscription{% endblock %}
+
+{% block header %}Your Subscription Renewal Reminder{% endblock %}
+
+{% block content %}
+    <p>Hello {{ farmer.user.get_full_name|default:farmer.user.email }},</p>
+    
+    <p>This is a friendly reminder that your <strong>{{ subscription.sub_type.name }}</strong> subscription 
+    is set to renew on <strong>{{ renewal_date|date:"F j, Y" }}</strong>.</p>
+    
+    <p>The renewal amount will be <strong>KSh {{ amount|floatformat:2 }}</strong>.</p>
+    
+    <p>Your subscription will be automatically renewed using your default payment method. If you wish to make any changes 
+    to your subscription or update your payment information, please do so before the renewal date.</p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{{ payment_url }}" class="button">Update Payment Method</a>
+    </div>
+    
+    <p>If you have any questions about your subscription or need assistance, please don't hesitate to contact our support team.</p>
+    
+    <p>Thank you for being a valued Smart Kuku customer!</p>
+{% endblock %}

@@ -1,0 +1,23 @@
+Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},
+
+We're happy to let you know that your {{ subscription.sub_type.name }} subscription 
+has been successfully renewed!
+
+=== SUBSCRIPTION DETAILS ===
+New Expiration Date: {{ new_end_date|date:"F j, Y" }}
+Amount Paid: KSh {{ subscription.sub_type.cost|floatformat:2 }}
+===========================
+
+You can view your receipt and subscription details here:
+{{ receipt_url|default:"#" }}
+
+Thank you for your continued trust in Smart Kuku. We're committed to helping you manage your poultry farm efficiently.
+
+If you have any questions about your subscription, feel free to reply to this email or contact our support team.
+
+Best regards,
+The Smart Kuku Team
+
+---
+© {% now "Y" %} Smart Kuku. All rights reserved.
+You're receiving this email because you have an account with Smart Kuku.

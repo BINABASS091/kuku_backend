@@ -1,0 +1,232 @@
+{
+  "info": {
+    "_postman_id": "6db8b6b4-2f3e-4b7c-9b2a-collection-smart-poultry",
+    "name": "Smart Poultry API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for Smart Poultry API (Django + DRF + JWT). Use with the provided environment to set base_url, api_prefix, and access_token."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Obtain Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/token/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "token", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/token/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "token", "refresh", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+
+    {
+      "name": "Root",
+      "item": [
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_prefix}}/",
+              "host": ["{{base_url}}"],
+              "path": ["{{api_prefix}}", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Users - List",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{access_token}}"}],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/users/", "host":["{{base_url}}"], "path":["{{api_prefix}}","users",""]}
+          }
+        },
+        {
+          "name": "Users - Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key":"Content-Type","value":"application/json"},
+              {"key":"Authorization","value":"Bearer {{access_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/users/", "host":["{{base_url}}"], "path":["{{api_prefix}}","users",""]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"farmer1\",\n  \"email\": \"farmer1@example.com\",\n  \"password\": \"ChangeMe123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"role\": \"FARMER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Users - Me",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{access_token}}"}],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/users/me/", "host":["{{base_url}}"], "path":["{{api_prefix}}","users","me",""]}
+          }
+        },
+        {
+          "name": "Farmers - List",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{access_token}}"}],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/farmers/", "host":["{{base_url}}"], "path":["{{api_prefix}}","farmers",""]}
+          }
+        },
+        {
+          "name": "Farmers - Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key":"Content-Type","value":"application/json"},
+              {"key":"Authorization","value":"Bearer {{access_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/farmers/", "host":["{{base_url}}"], "path":["{{api_prefix}}","farmers",""]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": 1,\n  \"phone_number\": \"+255700000000\",\n  \"address\": \"Dar es Salaam\",\n  \"experience_years\": 3,\n  \"specialization\": \"Broilers\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Farmers - My Farm",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{access_token}}"}],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/farmers/my_farm/", "host":["{{base_url}}"], "path":["{{api_prefix}}","farmers","my_farm",""]}
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Farms",
+      "item": [
+        {
+          "name": "Farms - List",
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/farms/","host":["{{base_url}}"],"path":["{{api_prefix}}","farms",""]}}
+        },
+        {
+          "name": "Farms - Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key":"Content-Type","value":"application/json"},
+              {"key":"Authorization","value":"Bearer {{access_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/farms/", "host":["{{base_url}}"], "path":["{{api_prefix}}","farms",""]},
+            "body": {"mode":"raw","raw":"{\n  \"farmer\": 1,\n  \"name\": \"Green Farm\",\n  \"location\": \"Dodoma\"\n}"}
+          }
+        },
+        {
+          "name": "Devices - List",
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/devices/","host":["{{base_url}}"],"path":["{{api_prefix}}","devices",""]}}
+        },
+        {
+          "name": "Devices - Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key":"Content-Type","value":"application/json"},
+              {"key":"Authorization","value":"Bearer {{access_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}{{api_prefix}}/devices/", "host":["{{base_url}}"], "path":["{{api_prefix}}","devices",""]},
+            "body": {"mode":"raw","raw":"{\n  \"farm\": 1,\n  \"name\": \"Device A\",\n  \"device_type\": \"SENSOR_HUB\"\n}"}
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Breeds",
+      "item": [
+        {"name":"Breed Types - List","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/breed-types/","host":["{{base_url}}"],"path":["{{api_prefix}}","breed-types",""]}}},
+        {"name":"Breed Types - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/breed-types/","host":["{{base_url}}"],"path":["{{api_prefix}}","breed-types",""]},"body":{"mode":"raw","raw":"{\n  \"name\": \"Broiler\"\n}"}}},
+        {"name":"Breeds - List","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/breeds/","host":["{{base_url}}"],"path":["{{api_prefix}}","breeds",""]}}},
+        {"name":"Breeds - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/breeds/","host":["{{base_url}}"],"path":["{{api_prefix}}","breeds",""]},"body":{"mode":"raw","raw":"{\n  \"breed_type\": 1,\n  \"name\": \"Cobb 500\",\n  \"description\": \"Fast growth\"\n}"}}},
+        {"name":"Activity Types - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/activity-types/","host":["{{base_url}}"],"path":["{{api_prefix}}","activity-types",""]},"body":{"mode":"raw","raw":"{\n  \"name\": \"Feeding\"\n}"}}},
+        {"name":"Breed Activities - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/breed-activities/","host":["{{base_url}}"],"path":["{{api_prefix}}","breed-activities",""]},"body":{"mode":"raw","raw":"{\n  \"breed\": 1,\n  \"activity_type\": 1,\n  \"name\": \"Morning Feed\",\n  \"description\": \"Give starter feed\"\n}"}}}
+      ]
+    },
+
+    {
+      "name": "Batches",
+      "item": [
+        {"name":"Batches - List","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/batches/","host":["{{base_url}}"],"path":["{{api_prefix}}","batches",""]}}},
+        {"name":"Batches - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/batches/","host":["{{base_url}}"],"path":["{{api_prefix}}","batches",""]},"body":{"mode":"raw","raw":"{\n  \"farm\": 1,\n  \"breed\": 1,\n  \"start_date\": \"2025-01-01\",\n  \"num_chicks\": 1000\n}"}}}
+      ]
+    },
+
+    {
+      "name": "Subscriptions",
+      "item": [
+        {"name":"Subscription Types - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/subscription-types/","host":["{{base_url}}"],"path":["{{api_prefix}}","subscription-types",""]},"body":{"mode":"raw","raw":"{\n  \"name\": \"Pro\",\n  \"price\": \"29.99\",\n  \"duration_days\": 30\n}"}}},
+        {"name":"Farmer Subscriptions - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/farmer-subscriptions/","host":["{{base_url}}"],"path":["{{api_prefix}}","farmer-subscriptions",""]},"body":{"mode":"raw","raw":"{\n  \"farmer\": 1,\n  \"subscription_type\": 1,\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-01-31\"\n}"}}}
+      ]
+    },
+
+    {
+      "name": "Sensors",
+      "item": [
+        {"name":"Sensor Types - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/sensor-types/","host":["{{base_url}}"],"path":["{{api_prefix}}","sensor-types",""]},"body":{"mode":"raw","raw":"{\n  \"name\": \"Temperature\"\n}"}}},
+        {"name":"Readings - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/readings/","host":["{{base_url}}"],"path":["{{api_prefix}}","readings",""]},"body":{"mode":"raw","raw":"{\n  \"device\": 1,\n  \"sensor_type\": 1,\n  \"value\": 25.4,\n  \"recorded_at\": \"2025-01-01T08:00:00Z\"\n}"}}}
+      ]
+    },
+
+    {
+      "name": "Knowledge",
+      "item": [
+        {"name":"Patient Health - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/patient-healths/","host":["{{base_url}}"],"path":["{{api_prefix}}","patient-healths",""]},"body":{"mode":"raw","raw":"{\n  \"bird_id\": \"B-1001\",\n  \"status\": \"HEALTHY\"\n}"}}},
+        {"name":"Recommendation - Create","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{access_token}}"}],"url":{"raw":"{{base_url}}{{api_prefix}}/recommendations/","host":["{{base_url}}"],"path":["{{api_prefix}}","recommendations",""]},"body":{"mode":"raw","raw":"{\n  \"title\": \"Hydration\",\n  \"content\": \"Ensure constant clean water supply\"\n}"}}}
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "api_prefix", "value": "/api/v1" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "username", "value": "admin" },
+    { "key": "password", "value": "admin123" }
+  ]
+}

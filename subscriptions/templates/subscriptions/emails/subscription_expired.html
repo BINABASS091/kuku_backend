@@ -1,0 +1,23 @@
+{% extends "subscriptions/emails/base_email.html" %}
+
+{% block title %}Your Subscription Has Expired{% endblock %}
+
+{% block header %}Your Subscription Has Expired{% endblock %}
+
+{% block content %}
+    <p>Hello {{ farmer.user.get_full_name|default:farmer.user.email }},</p>
+    
+    <p>We hope this message finds you well. We wanted to let you know that your <strong>{{ subscription.sub_type.name }}</strong> 
+    subscription expired on <strong>{{ expiration_date|date:"F j, Y" }}</strong>.</p>
+    
+    <p>As a result, you may have lost access to some premium features. To continue enjoying all the benefits of Smart Kuku, 
+    we encourage you to renew your subscription.</p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{{ renewal_url }}" class="button">Renew Your Subscription</a>
+    </div>
+    
+    <p>If you have any questions about your subscription or need assistance, please don't hesitate to contact our support team.</p>
+    
+    <p>We value your business and hope to continue serving you!</p>
+{% endblock %}

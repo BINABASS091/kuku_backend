@@ -1,0 +1,22 @@
+{% extends "subscriptions/emails/base_email.html" %}
+
+{% block title %}Action Required: Renew Your Subscription{% endblock %}
+
+{% block header %}Action Required: Renew Your Subscription{% endblock %}
+
+{% block content %}
+    <p>Hello {{ farmer.user.get_full_name|default:"Valued Customer" }},</p>
+    
+    <p>This is a friendly reminder that your <strong>{{ subscription.sub_type.name }}</strong> subscription 
+    will expire on <strong>{{ renewal_date|date:"F j, Y" }}</strong>.</p>
+    
+    <p>To continue enjoying uninterrupted access to all features, please renew your subscription before it expires.</p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{{ payment_url }}" class="button">Renew Your Subscription</a>
+    </div>
+    
+    <p>If you have any questions or need assistance, our support team is here to help.</p>
+    
+    <p>Thank you for being a valued Smart Kuku customer!</p>
+{% endblock %}
