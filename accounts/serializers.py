@@ -2,10 +2,27 @@ from rest_framework import serializers
 from accounts.models import User, Farmer
 
 class UserSerializer(serializers.ModelSerializer):
+    # Allow admin to optionally set a new password on update
+    password = serializers.CharField(write_only=True, required=False, allow_blank=False, min_length=8)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'is_active', 'date_joined']
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'role',
+            'is_active', 'is_staff', 'is_superuser', 'date_joined', 'password'
+        ]
         read_only_fields = ['id', 'date_joined']
+
+    def update(self, instance, validated_data):
+        # Extract password if present
+        password = validated_data.pop('password', None)
+        # Standard update for other fields
+        user = super().update(instance, validated_data)
+        # Apply password change securely
+        if password:
+            user.set_password(password)
+            user.save(update_fields=['password'])
+        return user
 
 class FarmerSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

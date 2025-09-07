@@ -1,9 +1,10 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from accounts.models import User, Farmer
 from accounts.serializers import UserSerializer, FarmerSerializer, UserCreateSerializer
+from config.permissions import IsAdminOrReadOnly
 
 # Create your views here.
 
@@ -16,11 +17,13 @@ class UserViewSet(viewsets.ModelViewSet):
         Instantiates and returns the list of permissions that this view requires.
         """
         if self.action == 'create':
-            # Allow unauthenticated users to register
-            permission_classes = [permissions.AllowAny]
-        else:
-            # Require authentication for all other actions
-            permission_classes = [permissions.IsAuthenticated]
+            # Allow unauthenticated users to self-register
+            return [permissions.AllowAny()]
+        if self.action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
+            # Admin-only for management operations
+            return [permissions.IsAuthenticated(), IsAdminOrReadOnly()]
+        # Default authenticated
+        permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
     
     def get_serializer_class(self):

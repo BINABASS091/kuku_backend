@@ -63,9 +63,9 @@ class ReadingSerializer(serializers.ModelSerializer):
         model = Reading
         fields = [
             'id', 'device', 'device_id', 'sensor_type', 'sensor_type_id', 
-            'value', 'timestamp', 'created_at', 'updated_at'
+            'value', 'timestamp'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id']
         
     def validate(self, data):
         """
