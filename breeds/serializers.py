@@ -7,22 +7,22 @@ from breeds.models import (
 class BreedTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreedType
-        fields = '__all__'
+        fields = ['breed_typeID', 'breedType']
 
 class BreedSerializer(serializers.ModelSerializer):
     # Accept FK by id on write
-    type = serializers.PrimaryKeyRelatedField(queryset=BreedType.objects.all())
+    breed_type = serializers.PrimaryKeyRelatedField(queryset=BreedType.objects.all())
     # Provide nested details on read
-    type_detail = BreedTypeSerializer(source='type', read_only=True)
+    type_detail = BreedTypeSerializer(source='breed_type', read_only=True)
 
     class Meta:
         model = Breed
-        fields = ['id', 'name', 'type', 'type_detail', 'photo']
+        fields = ['breedID', 'breedName', 'breed_type', 'type_detail', 'preedphoto']
 
 class ActivityTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityType
-        fields = '__all__'
+        fields = ['activityTypeID', 'activityType']
 
 class BreedActivitySerializer(serializers.ModelSerializer):
     # Write as PKs
@@ -34,12 +34,12 @@ class BreedActivitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BreedActivity
-        fields = ['id', 'breed', 'breed_detail', 'activity_type', 'activity_type_detail', 'age', 'status']
+        fields = ['breedActivityID', 'breed', 'breed_detail', 'activity_type', 'activity_type_detail', 'age', 'breed_activity_status']
 
 class ConditionTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConditionType
-        fields = '__all__'
+        fields = ['condition_typeID', 'name']
 
 class BreedConditionSerializer(serializers.ModelSerializer):
     # Write as PKs
@@ -51,12 +51,12 @@ class BreedConditionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BreedCondition
-        fields = ['id', 'breed', 'breed_detail', 'condition_type', 'condition_type_detail', 'min_value', 'max_value', 'status']
+        fields = ['breed_conditionID', 'breed', 'breed_detail', 'condition_type', 'condition_type_detail', 'condictionMin', 'conditionMax', 'condition_status']
 
 class FoodTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodType
-        fields = '__all__'
+        fields = ['foodTypeID', 'name']
 
 class BreedFeedingSerializer(serializers.ModelSerializer):
     # Write as PKs
@@ -68,7 +68,7 @@ class BreedFeedingSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BreedFeeding
-        fields = ['id', 'breed', 'breed_detail', 'food_type', 'food_type_detail', 'age', 'quantity', 'frequency', 'status']
+        fields = ['breedFeedingID', 'breed', 'breed_detail', 'food_type', 'food_type_detail', 'age', 'quantity', 'frequency', 'breed_feed_status']
 
 class BreedGrowthSerializer(serializers.ModelSerializer):
     # Write as PK
@@ -78,4 +78,4 @@ class BreedGrowthSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BreedGrowth
-        fields = ['id', 'breed', 'breed_detail', 'age', 'min_weight']
+        fields = ['breedGrowthID', 'breed', 'breed_detail', 'age', 'minWeight']

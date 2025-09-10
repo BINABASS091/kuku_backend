@@ -10,8 +10,8 @@ class DeviceSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Device
-        fields = ['id', 'device_id', 'name', 'cell_no', 'picture', 'status']
-        read_only_fields = ['id', 'status']
+        fields = ['deviceID', 'device_id', 'name', 'cell_no', 'picture', 'status']
+        read_only_fields = ['deviceID', 'status']
         
     def validate_device_id(self, value):
         if not value or not value.strip():
@@ -25,8 +25,8 @@ class SensorTypeSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = SensorType
-        fields = '__all__'
-        read_only_fields = ['id']
+        fields = ['sensorTypeID', 'name', 'unit']
+        read_only_fields = ['sensorTypeID']
         
     def validate_name(self, value):
         if not value or not value.strip():
@@ -62,10 +62,10 @@ class ReadingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reading
         fields = [
-            'id', 'device', 'device_id', 'sensor_type', 'sensor_type_id', 
+            'readingID', 'device', 'device_id', 'sensor_type', 'sensor_type_id', 
             'value', 'timestamp'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['readingID']
         
     def validate(self, data):
         """

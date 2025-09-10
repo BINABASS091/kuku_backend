@@ -11,7 +11,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Farmer)
 class FarmerAdmin(admin.ModelAdmin):
-	list_display = ("id", "full_name", "email", "phone", "created_date")
+	list_display = ("user", "full_name", "email", "phone", "created_date")
 	search_fields = ("full_name", "email", "phone")
 
 # Register your models here.

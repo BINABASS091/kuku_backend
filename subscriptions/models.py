@@ -8,15 +8,17 @@ class SubscriptionType(models.Model):
         ('PREMIUM', 'Premium/Large')
     ]
     
+    id = models.AutoField(primary_key=True)  # Keep existing id field for migration compatibility
+    subscriptionTypeID = models.IntegerField(unique=True, default=1)  # Will become primary key after migration
     name = models.CharField(max_length=50, unique=True)
     tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='INDIVIDUAL')
-    farm_size = models.CharField(max_length=20)
-    cost = models.DecimalField(max_digits=10, decimal_places=2)
+    farm_size = models.CharField(max_length=20, default='Small')
+    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     max_hardware_nodes = models.PositiveIntegerField(default=1)
     max_software_services = models.PositiveIntegerField(default=1)
     includes_predictions = models.BooleanField(default=False)
     includes_analytics = models.BooleanField(default=False)
-    description = models.TextField()
+    description = models.TextField(default='No description')
 
     def __str__(self):
         return f'{self.get_tier_display()} - {self.name} ({self.farm_size})'
@@ -39,7 +41,9 @@ class ResourceCategory(models.TextChoices):
     INVENTORY = 'INVENTORY', 'Inventory Management'
 
 class Resource(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    id = models.AutoField(primary_key=True)  # Keep existing id field for migration compatibility
+    resourceID = models.IntegerField(unique=True, default=1)  # Will become primary key after migration
+    name = models.CharField(max_length=50, unique=True, default='Default Resource')
     resource_type = models.CharField(
         max_length=20, 
         choices=ResourceType.choices,
@@ -50,13 +54,13 @@ class Resource(models.Model):
         choices=ResourceCategory.choices,
         default=ResourceCategory.INVENTORY
     )
-    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     status = models.BooleanField(default=True)
     is_basic = models.BooleanField(
         default=False,
         help_text='If True, this resource is available to all farmers regardless of subscription'
     )
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -83,10 +87,12 @@ class SubscriptionStatus(models.TextChoices):
     EXPIRED = 'EXPIRED', 'Expired'
 
 class FarmerSubscription(models.Model):
-    farmer = models.ForeignKey('accounts.Farmer', on_delete=models.CASCADE, related_name='subscriptions')
-    sub_type = models.ForeignKey('subscriptions.SubscriptionType', on_delete=models.PROTECT, related_name='farmer_subscriptions')
+    id = models.AutoField(primary_key=True)  # Keep existing id field for migration compatibility
+    farmerSubscriptionID = models.IntegerField(unique=True, default=1)  # Will become primary key after migration
+    farmerID = models.ForeignKey('accounts.Farmer', on_delete=models.CASCADE, related_name='subscriptions', db_column='farmerID', null=True, blank=True)
+    subscription_typeID = models.ForeignKey('subscriptions.SubscriptionType', on_delete=models.PROTECT, related_name='farmer_subscriptions', db_column='subscription_typeID', null=True, blank=True)
     start_date = models.DateField(auto_now_add=True)
-    end_date = models.DateField()
+    end_date = models.DateField(default='1900-01-01')
     status = models.CharField(
         max_length=20, 
         choices=SubscriptionStatus.choices,
@@ -103,7 +109,7 @@ class FarmerSubscription(models.Model):
         verbose_name_plural = 'Farmer Subscriptions'
 
     def __str__(self):
-        return f'{self.farmer.user.get_full_name()} - {self.sub_type.name} ({self.status})'
+        return f'{self.farmerID.user.get_full_name()} - {self.subscription_typeID.name} ({self.status})'
 
     @property
     def is_active(self):
@@ -152,15 +158,21 @@ class FarmerSubscription(models.Model):
             return utilization['software']['available'] > 0
 
 class FarmerSubscriptionResource(models.Model):
-    farmer_subscription = models.ForeignKey(
+    id = models.AutoField(primary_key=True)  # Keep existing id field for migration compatibility
+    farmerSubscriptionResourceID = models.IntegerField(unique=True, default=1)  # Will become primary key after migration
+    farmerSubscriptionID = models.ForeignKey(
         'subscriptions.FarmerSubscription', 
         on_delete=models.CASCADE, 
-        related_name='resources'
+        related_name='resources',
+        db_column='farmerSubscriptionID',
+        null=True, blank=True
     )
-    resource = models.ForeignKey(
+    resourceID = models.ForeignKey(
         'subscriptions.Resource', 
         on_delete=models.PROTECT, 
-        related_name='allocations'
+        related_name='allocations',
+        db_column='resourceID',
+        null=True, blank=True
     )
     quantity = models.PositiveIntegerField(default=1)
     status = models.BooleanField(default=True)
@@ -168,14 +180,12 @@ class FarmerSubscriptionResource(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('farmer_subscription', 'resource')
+        unique_together = ['farmerSubscriptionID', 'resourceID']
         verbose_name = 'Subscription Resource'
         verbose_name_plural = 'Subscription Resources'
 
     def __str__(self):
-        return f'{self.farmer_subscription} - {self.resource.name}'
-
-    def save(self, *args, **kwargs):
+        return f'{self.farmerSubscriptionID} - {self.resourceID} ({self.quantity})'
         if not self.pk:  # Only check for new instances
             if not self.resource.is_basic and not self.farmer_subscription.can_add_resource(self.resource):
                 from rest_framework.exceptions import ValidationError
@@ -192,14 +202,18 @@ class PaymentStatus(models.TextChoices):
     REFUNDED = 'REFUNDED', 'Refunded'
 
 class Payment(models.Model):
-    farmer_subscription = models.ForeignKey(
+    id = models.AutoField(primary_key=True)  # Keep existing id field for migration compatibility
+    paymentID = models.IntegerField(unique=True, default=1)  # Will become primary key after migration
+    farmerSubscriptionID = models.ForeignKey(
         'subscriptions.FarmerSubscription', 
         on_delete=models.CASCADE, 
-        related_name='payments'
+        related_name='payments',
+        db_column='farmerSubscriptionID',
+        null=True, blank=True
     )
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     payment_date = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateField()
+    due_date = models.DateField(default='1900-01-01')
     status = models.CharField(
         max_length=20,
         choices=PaymentStatus.choices,
@@ -217,6 +231,6 @@ class Payment(models.Model):
         verbose_name_plural = 'Payments'
 
     def __str__(self):
-        return f'Payment #{self.id} - {self.amount} ({self.status})'
+        return f'{self.farmerSubscriptionID} - {self.amount} ({self.status})'
 
 # Create your models here.

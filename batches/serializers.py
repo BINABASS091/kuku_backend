@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from batches.models import Batch, ActivitySchedule, BatchActivity
+from batches.models import Batch, ActivitySchedule, BatchActivity, BatchFeeding
 from farms.models import Farm
 from breeds.models import Breed, BreedActivity
 from breeds.serializers import BreedSerializer as BreedDetailSerializer
@@ -7,7 +7,7 @@ from breeds.serializers import BreedSerializer as BreedDetailSerializer
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farm
-        fields = ['id', 'name', 'location']
+        fields = ['farmID', 'name', 'location']
 
 # Use the detailed Breed serializer from breeds app (includes type_detail)
 BreedSerializer = BreedDetailSerializer
@@ -15,7 +15,7 @@ BreedSerializer = BreedDetailSerializer
 class BreedActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = BreedActivity
-        fields = ['id', 'name', 'description']
+        fields = ['breedActivityID', 'breed', 'activity_type', 'age', 'breed_activity_status']
 
 class BatchSerializer(serializers.ModelSerializer):
     farm = FarmSerializer(read_only=True)
@@ -23,14 +23,14 @@ class BatchSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Batch
-        fields = '__all__'
+        fields = ['batchID', 'farm', 'breed', 'arrive_date', 'init_age', 'harvest_age', 'quanitity', 'init_weight', 'batch_status']
 
 class ActivityScheduleSerializer(serializers.ModelSerializer):
     batch = BatchSerializer(read_only=True)
     
     class Meta:
         model = ActivitySchedule
-        fields = '__all__'
+        fields = ['activityID', 'batch', 'activityName', 'activityDescription', 'activityDay', 'activity_status', 'activity_frequency']
 
 class BatchActivitySerializer(serializers.ModelSerializer):
     batch = BatchSerializer(read_only=True)
@@ -38,4 +38,11 @@ class BatchActivitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BatchActivity
-        fields = '__all__'
+        fields = ['batchActivityID', 'batch', 'breed_activity', 'batchActivityName', 'batchActivityDate', 'batchActivityDetails', 'batchAcitivtyCost']
+
+class BatchFeedingSerializer(serializers.ModelSerializer):
+    batch = BatchSerializer(read_only=True)
+    
+    class Meta:
+        model = BatchFeeding
+        fields = ['batchFeedingID', 'batch', 'feedingDate', 'feedingAmount', 'status']

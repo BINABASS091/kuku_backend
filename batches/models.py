@@ -2,47 +2,70 @@ from django.db import models
 
 
 class Batch(models.Model):
-	status_choices = (
-		(0, 'Pending'),
-		(1, 'Ongoing'),
-		(2, 'Completed'),
-	)
-	farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='batches')
-	breed = models.ForeignKey('breeds.Breed', on_delete=models.PROTECT, related_name='batches')
-	arrive_date = models.DateField()
-	init_age = models.IntegerField()
-	harvest_age = models.IntegerField(default=0)
-	quantity = models.IntegerField()
-	init_weight = models.IntegerField()
-	status = models.IntegerField(choices=status_choices, default=1)
+	batchID = models.IntegerField(unique=True)  # Will become primary key after migration
+	farmID = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='batches', db_column='farmID', null=True, blank=True)
+	breedID = models.ForeignKey('breeds.Breed', on_delete=models.CASCADE, related_name='batches', db_column='breedID', null=True, blank=True)
+	arriveDate = models.DateField(default='1900-01-01')
+	initAge = models.IntegerField(default=0)
+	harvestAge = models.IntegerField(default=0)
+	quanitity = models.IntegerField(default=0)  # Note: keeping original spelling from PostgreSQL schema
+	initWeight = models.IntegerField(default=0)
+	batch_status = models.IntegerField(default=1)
+
+	class Meta:
+		verbose_name = 'Batch'
+		verbose_name_plural = 'Batches'
 
 	def __str__(self):
-		return f'BATCH/{self.id}'
+		return f'BATCH/{self.batchID}'
 
 
 class ActivitySchedule(models.Model):
-	period_choices = (
-		('Day', 'Day'),
-		('Week', 'Week'),
-		('Month', 'Month'),
-	)
-	batch = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='schedules')
-	name = models.CharField(max_length=100)
-	description = models.CharField(max_length=300)
-	period = models.CharField(max_length=10, choices=period_choices, default='Day')
-	frequency = models.IntegerField()
-	status = models.BooleanField(default=True)
+	activityID = models.IntegerField(unique=True)  # Will become primary key after migration
+	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='schedules', db_column='batchID', null=True, blank=True)
+	activityName = models.CharField(max_length=100, default='Default Activity')
+	activityDescription = models.CharField(max_length=300, default='No description')
+	activityDay = models.CharField(max_length=10, default='Day')
+	activity_status = models.IntegerField(default=1)
+	activity_frequency = models.IntegerField(default=1)
 
 	class Meta:
-		unique_together = ('batch', 'name')
+		verbose_name = 'Activity Schedule'
+		verbose_name_plural = 'Activity Schedules'
+
+	def __str__(self):
+		return f'{self.activityName} - {self.batchID}'
 
 
 class BatchActivity(models.Model):
-	batch = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='activities')
-	breed_activity = models.ForeignKey('breeds.BreedActivity', on_delete=models.SET_NULL, null=True, blank=True, related_name='batch_activities')
-	name = models.CharField(max_length=100)
-	date = models.DateField()
-	details = models.CharField(max_length=200)
-	cost = models.IntegerField(default=0)
+	batchActivityID = models.IntegerField(unique=True, default=0)  # Will become primary key after migration
+	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='activities', db_column='batchID', null=True, blank=True)
+	breedActivityID = models.ForeignKey('breeds.BreedActivity', on_delete=models.CASCADE, related_name='batch_activities', db_column='breedActivityID', null=True, blank=True)
+	batchActivityName = models.CharField(max_length=100, default='Default Batch Activity')
+	batchActivityDate = models.DateField(default='1900-01-01')
+	batchActivityDetails = models.CharField(max_length=50, default='No details')
+	batchAcitivtyCost = models.IntegerField(default=0)  # Note: keeping original spelling from PostgreSQL schema
+
+	class Meta:
+		verbose_name = 'Batch Activity'
+		verbose_name_plural = 'Batch Activities'
+
+	def __str__(self):
+		return f'{self.batchActivityName} - {self.batchID}'
+
+
+class BatchFeeding(models.Model):
+	batchFeedingID = models.IntegerField(unique=True)  # Will become primary key after migration
+	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='feedings', db_column='batchID', null=True, blank=True)
+	feedingDate = models.DateField(default='CURRENT_DATE')
+	feedingAmount = models.IntegerField(default=0)
+	status = models.IntegerField(default=1)
+
+	class Meta:
+		verbose_name = 'Batch Feeding'
+		verbose_name_plural = 'Batch Feedings'
+
+	def __str__(self):
+		return f'{self.batchID} - {self.feedingDate}'
 
 # Create your models here.
