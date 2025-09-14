@@ -14,6 +14,7 @@ class BreedType(models.Model):
 	class Meta:
 		verbose_name = 'Breed Type'
 		verbose_name_plural = 'Breed Types'
+		ordering = ['breedType']
 
 	def __str__(self):
 		return self.breedType
@@ -28,6 +29,7 @@ class Breed(models.Model):
 	class Meta:
 		verbose_name = 'Breed'
 		verbose_name_plural = 'Breeds'
+		ordering = ['breedName']
 
 	def __str__(self):
 		return self.breedName
@@ -40,6 +42,7 @@ class ActivityType(models.Model):
 	class Meta:
 		verbose_name = 'Activity Type'
 		verbose_name_plural = 'Activity Types'
+		ordering = ['activityType']
 
 	def __str__(self):
 		return self.activityType
@@ -73,6 +76,7 @@ class ConditionType(models.Model):
 	class Meta:
 		verbose_name = 'Condition Type'
 		verbose_name_plural = 'Condition Types'
+		ordering = ['name']
 
 	def __str__(self):
 		return f'{self.name} ({self.unit})'
@@ -112,6 +116,7 @@ class FoodType(models.Model):
 	class Meta:
 		verbose_name = 'Food Type'
 		verbose_name_plural = 'Food Types'
+		ordering = ['name']
 
 	def __str__(self):
 		return self.name

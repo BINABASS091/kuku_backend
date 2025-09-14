@@ -27,8 +27,8 @@ class ReadingViewSet(viewsets.ModelViewSet):
     queryset = Reading.objects.all()
     serializer_class = ReadingSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['device', 'sensor_type']
-    search_fields = ['device__name', 'sensor_type__name']
+    filterset_fields = ['deviceID', 'sensor_typeID']
+    search_fields = ['deviceID__name', 'sensor_typeID__name']
     ordering_fields = ['timestamp', 'value']
     ordering = ['-timestamp']
 
@@ -37,8 +37,8 @@ class ReadingViewSet(viewsets.ModelViewSet):
         Return a filtered queryset of readings based on query parameters.
         """
         queryset = Reading.objects.select_related(
-            'device', 
-            'sensor_type'
+            'deviceID', 
+            'sensor_typeID'
         ).all()
         
         # Apply filters from query parameters
@@ -48,9 +48,9 @@ class ReadingViewSet(viewsets.ModelViewSet):
         to_ts = self.request.query_params.get('to')
         
         if device_id:
-            queryset = queryset.filter(device_id=device_id)
+            queryset = queryset.filter(deviceID=device_id)
         if sensor_type_id:
-            queryset = queryset.filter(sensor_type_id=sensor_type_id)
+            queryset = queryset.filter(sensor_typeID=sensor_type_id)
         if from_ts:
             queryset = queryset.filter(timestamp__gte=from_ts)
         if to_ts:

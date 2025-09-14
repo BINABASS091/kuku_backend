@@ -9,6 +9,7 @@ class SensorType(models.Model):
 	class Meta:
 		verbose_name = 'Sensor Type'
 		verbose_name_plural = 'Sensor Types'
+		ordering = ['name']
 
 	def __str__(self):
 		return f'{self.name} ({self.unit})'

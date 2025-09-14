@@ -91,7 +91,7 @@ class ResourceSerializer(serializers.ModelSerializer):
 
         """Get total quantity allocated across all subscriptions"""
         from django.db.models import Sum
-        result = obj.subscription_resources.aggregate(total=Sum('resource_allocations__quantity'))
+        result = obj.allocations.aggregate(total=Sum('quantity'))
         return result['total'] or 0
     
     def get_status_display(self, obj):
