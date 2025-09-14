@@ -43,12 +43,12 @@ class FarmerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farmer
         fields = [
-            'id', 'user', 'full_name', 'address', 'email', 'phone', 'phone_number',
+            'farmerID', 'user', 'farmerName', 'address', 'email', 'phone', 'phone_number',
             'city', 'state', 'country', 'zip_code', 'date_of_birth', 'gender',
             'experience_years', 'farm_size', 'is_verified', 'subscription_status',
             'total_farms', 'total_batches', 'created_date'
         ]
-        read_only_fields = ['id', 'created_date']
+        read_only_fields = ['farmerID', 'created_date']
     
     def get_city(self, obj):
         # Extract city from address or return None
@@ -85,7 +85,7 @@ class FarmerSerializer(serializers.ModelSerializer):
     def get_farm_size(self, obj):
         """Get total farm size for this farmer"""
         try:
-            # Since size is a CharField, we need to handle it differently
+            # Since farmSize is a CharField, we need to handle it differently
             farms = obj.farms.all()
             if not farms:
                 return "0"
@@ -95,8 +95,8 @@ class FarmerSerializer(serializers.ModelSerializer):
             size_parts = []
             
             for farm in farms:
-                if hasattr(farm, 'size') and farm.size:
-                    size_str = str(farm.size).strip()
+                if hasattr(farm, 'farmSize') and farm.farmSize:
+                    size_str = str(farm.farmSize).strip()
                     # Try to extract numbers from the size string
                     import re
                     numbers = re.findall(r'\d+\.?\d*', size_str)

@@ -10,7 +10,7 @@ class DeviceListSerializer(serializers.ModelSerializer):
 
 
 class FarmSerializer(serializers.ModelSerializer):
-    farmerID = serializers.PrimaryKeyRelatedField(queryset=Farm._meta.get_field('farmer').remote_field.model.objects.all(), source='farmer')
+    farmerID = serializers.PrimaryKeyRelatedField(queryset=Farm._meta.get_field('farmerID').remote_field.model.objects.all(), source='farmerID')
     farmer_details = serializers.SerializerMethodField()
     devices = DeviceListSerializer(many=True, read_only=True, source='farm_devices')
     total_devices = serializers.SerializerMethodField()
@@ -24,25 +24,25 @@ class FarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farm
         fields = [
-            'farmID', 'name', 'location', 'size', 'farmerID', 'farmer_details',
+            'farmID', 'farmName', 'location', 'farmSize', 'farmerID', 'farmer_details',
             'devices', 'total_devices', 'active_devices', 'total_batches', 
             'active_batches', 'total_birds', 'last_activity_date', 'farm_status'
         ]
         read_only_fields = ['farmID']
 
-    def validate_size(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Size must be a positive number.")
+    def validate_farmSize(self, value):
+        if not value:
+            raise serializers.ValidationError("Farm size is required.")
         return value
 
     def get_farmer_details(self, obj):
-        if hasattr(obj, 'farmer') and obj.farmer:
+        if hasattr(obj, 'farmerID') and obj.farmerID:
             return {
-                'id': obj.farmer.id,
-                'full_name': obj.farmer.full_name,
-                'email': obj.farmer.email,
-                'phone': obj.farmer.phone,
-                'username': obj.farmer.user.username if obj.farmer.user else None
+                'id': obj.farmerID.farmerID,
+                'farmerName': obj.farmerID.farmerName,
+                'email': obj.farmerID.email,
+                'phone': obj.farmerID.phone,
+                'username': obj.farmerID.user.username if obj.farmerID.user else None
             }
         return None
 
@@ -102,7 +102,7 @@ class FarmSerializer(serializers.ModelSerializer):
 
 
 class DeviceSerializer(serializers.ModelSerializer):
-    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all(), source='farm')
+    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all(), source='farmID')
     farm_details = serializers.SerializerMethodField()
     last_reading = serializers.SerializerMethodField()
     readings_count = serializers.SerializerMethodField()
@@ -116,12 +116,12 @@ class DeviceSerializer(serializers.ModelSerializer):
         read_only_fields = ['deviceID']
 
     def get_farm_details(self, obj):
-        if obj.farm:
+        if obj.farmID:
             return {
-                'farmID': obj.farm.farmID,
-                'name': obj.farm.name,
-                'location': obj.farm.location,
-                'farmer_name': obj.farm.farmer.full_name if obj.farm.farmer else None
+                'farmID': obj.farmID.farmID,
+                'farmName': obj.farmID.farmName,
+                'location': obj.farmID.location,
+                'farmer_name': obj.farmID.farmerID.farmerName if obj.farmID.farmerID else None
             }
         return None
 

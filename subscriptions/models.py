@@ -22,6 +22,10 @@ class SubscriptionType(models.Model):
     includes_analytics = models.BooleanField(default=False)
     description = models.TextField(blank=True, default='')
 
+    class Meta:
+        db_table = 'subscription_type_tb'
+        ordering = ['tier', 'name']
+
     def __str__(self):
         return f'{self.tier} - {self.name} ({self.farm_size})'
 
@@ -78,6 +82,7 @@ class Resource(models.Model):
 
     class Meta:
         ordering = ['resource_type', 'name']
+        db_table = 'resource_tb'
         indexes = [
             models.Index(fields=['resource_type', 'category'], name='resource_type_category_idx')
         ]
@@ -125,6 +130,7 @@ class FarmerSubscription(models.Model):
         ordering = ['-start_date']
         verbose_name = 'Farmer Subscription'
         verbose_name_plural = 'Farmer Subscriptions'
+        db_table = 'farmer_subscription_tb'
         indexes = [
             models.Index(fields=['status', 'start_date'], name='subscription_status_start_idx')
         ]
@@ -223,6 +229,7 @@ class FarmerSubscriptionResource(models.Model):
         unique_together = ['farmerSubscriptionID', 'resourceID']
         verbose_name = 'Subscription Resource'
         verbose_name_plural = 'Subscription Resources'
+        db_table = 'farmer_subscription_resource_tb'
         indexes = [
             models.Index(fields=['farmerSubscriptionID', 'resourceID']),
             models.Index(fields=['status'], name='sub_res_status_idx')
@@ -287,6 +294,7 @@ class Payment(models.Model):
         ordering = ['-payment_date']
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
+        db_table = 'payment_tb'
 
     def __str__(self):
         return f'{self.farmerSubscriptionID} - {self.amount} ({self.status})'

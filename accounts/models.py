@@ -13,10 +13,13 @@ class User(AbstractUser):
 	is_active = models.BooleanField(default=True)
 	profile_image = models.CharField(max_length=200, default='default.png')
 
+	class Meta:
+		db_table = 'auth_user'
+
 
 class Farmer(models.Model):
 	user = models.OneToOneField('accounts.User', on_delete=models.CASCADE, related_name='farmer_profile')
-	full_name = models.CharField(max_length=100)
+	farmerName = models.CharField(max_length=100)  # Match SQL schema
 	address = models.CharField(max_length=200)
 	email = models.EmailField()
 	phone = models.CharField(max_length=20)
@@ -24,8 +27,18 @@ class Farmer(models.Model):
 
 	class Meta:
 		ordering = ['created_date']
+		db_table = 'farmer_tb'
 
 	def __str__(self):
-		return f'{self.full_name}'
+		return f'{self.farmerName}'
+
+	# Compatibility properties for existing code
+	@property
+	def full_name(self):
+		return self.farmerName
+
+	@property
+	def farmerID(self):
+		return self.id
 
 # Create your models here.

@@ -3,16 +3,26 @@ from django.db import models
 
 class SensorType(models.Model):
 	sensorTypeID = models.AutoField(primary_key=True)
-	name = models.CharField(max_length=50, unique=True)
-	unit = models.CharField(max_length=20)
+	sensorTypeName = models.CharField(max_length=50, unique=True)  # Match SQL schema
+	measurementUnit = models.CharField(max_length=20)  # Match SQL schema
 
 	class Meta:
 		verbose_name = 'Sensor Type'
 		verbose_name_plural = 'Sensor Types'
-		ordering = ['name']
+		ordering = ['sensorTypeName']
+		db_table = 'sensor_type_tb'  # Match SQL table name
 
 	def __str__(self):
-		return f'{self.name} ({self.unit})'
+		return f'{self.sensorTypeName} ({self.measurementUnit})'
+
+	# Compatibility properties for existing code
+	@property
+	def name(self):
+		return self.sensorTypeName
+	
+	@property
+	def unit(self):
+		return self.measurementUnit
 
 
 class Reading(models.Model):
@@ -25,6 +35,7 @@ class Reading(models.Model):
 	class Meta:
 		verbose_name = 'Reading'
 		verbose_name_plural = 'Readings'
+		db_table = 'reading_tb'
 		indexes = [
 			models.Index(fields=['deviceID', 'timestamp']),
 		]

@@ -22,6 +22,7 @@ class Batch(models.Model):
 	class Meta:
 		verbose_name = 'Batch'
 		verbose_name_plural = 'Batches'
+		db_table = 'batch_tb'
 
 	def __str__(self):
 		return f'BATCH/{self.batchID}'
@@ -43,6 +44,7 @@ class ActivitySchedule(models.Model):
 	class Meta:
 		verbose_name = 'Activity Schedule'
 		verbose_name_plural = 'Activity Schedules'
+		db_table = 'activity_schedule_tb'
 
 	def __str__(self):
 		return f'{self.activityName} - {self.batchID}'
@@ -60,6 +62,7 @@ class BatchActivity(models.Model):
 	class Meta:
 		verbose_name = 'Batch Activity'
 		verbose_name_plural = 'Batch Activities'
+		db_table = 'batch_activity_tb'
 
 	def __str__(self):
 		return f'{self.batchActivityName} - {self.batchID}'
@@ -79,6 +82,7 @@ class BatchFeeding(models.Model):
 	class Meta:
 		verbose_name = 'Batch Feeding'
 		verbose_name_plural = 'Batch Feedings'
+		db_table = 'batch_feeding_tb'
 
 	def __str__(self):
 		return f'{self.batchID} - {self.feedingDate}'

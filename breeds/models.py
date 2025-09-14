@@ -30,6 +30,7 @@ class Breed(models.Model):
 		verbose_name = 'Breed'
 		verbose_name_plural = 'Breeds'
 		ordering = ['breedName']
+		db_table = 'breed_tb'
 
 	def __str__(self):
 		return self.breedName
@@ -43,6 +44,7 @@ class ActivityType(models.Model):
 		verbose_name = 'Activity Type'
 		verbose_name_plural = 'Activity Types'
 		ordering = ['activityType']
+		db_table = 'activity_type_tb'
 
 	def __str__(self):
 		return self.activityType
@@ -63,6 +65,7 @@ class BreedActivity(models.Model):
 		verbose_name = 'Breed Activity'
 		verbose_name_plural = 'Breed Activities'
 		unique_together = ('breedID', 'activityTypeID', 'age')
+		db_table = 'breed_activity_tb'
 
 	def __str__(self):
 		return f'{self.activityTypeID} - {self.breedID} - Age {self.age}'
@@ -70,16 +73,26 @@ class BreedActivity(models.Model):
 
 class ConditionType(models.Model):
 	condition_typeID = models.AutoField(primary_key=True)
-	name = models.CharField(max_length=50)
-	unit = models.CharField(max_length=50)
+	conditionName = models.CharField(max_length=50)  # Match SQL schema
+	condition_unit = models.CharField(max_length=50)  # Match SQL schema
 
 	class Meta:
 		verbose_name = 'Condition Type'
 		verbose_name_plural = 'Condition Types'
-		ordering = ['name']
+		ordering = ['conditionName']
+		db_table = 'condition_type_tb'  # Match SQL table name
 
 	def __str__(self):
-		return f'{self.name} ({self.unit})'
+		return f'{self.conditionName} ({self.condition_unit})'
+
+	# Compatibility property for existing code
+	@property
+	def name(self):
+		return self.conditionName
+	
+	@property
+	def unit(self):
+		return self.condition_unit
 
 
 class BreedCondition(models.Model):
@@ -98,6 +111,7 @@ class BreedCondition(models.Model):
 		verbose_name = 'Breed Condition'
 		verbose_name_plural = 'Breed Conditions'
 		unique_together = ('breedID', 'condition_typeID')
+		db_table = 'breed_condition_tb'
 		constraints = [
 			models.CheckConstraint(
 				check=models.Q(condictionMin__lte=models.F('conditionMax')),
@@ -111,15 +125,21 @@ class BreedCondition(models.Model):
 
 class FoodType(models.Model):
 	foodTypeID = models.AutoField(primary_key=True)
-	name = models.CharField(max_length=50, unique=True)
+	foodName = models.CharField(max_length=50, unique=True)  # Match SQL schema
 
 	class Meta:
 		verbose_name = 'Food Type'
 		verbose_name_plural = 'Food Types'
-		ordering = ['name']
+		ordering = ['foodName']
+		db_table = 'food_type_tb'  # Match SQL table name
 
 	def __str__(self):
-		return self.name
+		return self.foodName
+
+	# Compatibility property for existing code
+	@property
+	def name(self):
+		return self.foodName
 
 
 class BreedFeeding(models.Model):
@@ -139,6 +159,7 @@ class BreedFeeding(models.Model):
 		verbose_name = 'Breed Feeding'
 		verbose_name_plural = 'Breed Feedings'
 		unique_together = ('breedID', 'foodTypeID', 'age')
+		db_table = 'breed_feeding_tb'
 
 	def __str__(self):
 		return f'{self.breedID} - {self.foodTypeID} - Age {self.age}'
@@ -154,6 +175,7 @@ class BreedGrowth(models.Model):
 		verbose_name = 'Breed Growth'
 		verbose_name_plural = 'Breed Growths'
 		unique_together = ('breedID', 'age')
+		db_table = 'breed_growth_tb'
 		indexes = [
 			models.Index(fields=['breedID', 'age'], name='breed_growth_age_idx')
 		]
@@ -163,14 +185,16 @@ class BreedGrowth(models.Model):
 
 
 class FeedingType(models.Model):
-	"""Represents feeding_type_tb (legacy)."""
+	"""Represents feeding_type_tb from SQL schema."""
 	feedingTypeID = models.AutoField(primary_key=True)
 	feedingName = models.CharField(max_length=50, unique=True)
-	quanitityType = models.CharField(max_length=30)
+	quantityType = models.CharField(max_length=30)  # Fixed typo from SQL
 
 	class Meta:
 		verbose_name = 'Feeding Type'
 		verbose_name_plural = 'Feeding Types'
+		ordering = ['feedingName']
+		db_table = 'feeding_type_tb'
 
 	def __str__(self):
 		return self.feedingName
