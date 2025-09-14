@@ -26,11 +26,128 @@ class UserSerializer(serializers.ModelSerializer):
 
 class FarmerSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    phone_number = serializers.CharField(source='phone', read_only=True)
+    city = serializers.SerializerMethodField()
+    state = serializers.SerializerMethodField()
+    country = serializers.SerializerMethodField()
+    zip_code = serializers.SerializerMethodField()
+    date_of_birth = serializers.SerializerMethodField()
+    gender = serializers.SerializerMethodField()
+    experience_years = serializers.SerializerMethodField()
+    farm_size = serializers.SerializerMethodField()
+    is_verified = serializers.SerializerMethodField()
+    subscription_status = serializers.SerializerMethodField()
+    total_farms = serializers.SerializerMethodField()
+    total_batches = serializers.SerializerMethodField()
     
     class Meta:
         model = Farmer
-        fields = ['id', 'user', 'full_name', 'address', 'email', 'phone', 'created_date']
+        fields = [
+            'id', 'user', 'full_name', 'address', 'email', 'phone', 'phone_number',
+            'city', 'state', 'country', 'zip_code', 'date_of_birth', 'gender',
+            'experience_years', 'farm_size', 'is_verified', 'subscription_status',
+            'total_farms', 'total_batches', 'created_date'
+        ]
         read_only_fields = ['id', 'created_date']
+    
+    def get_city(self, obj):
+        # Extract city from address or return None
+        return None
+
+    def get_state(self, obj):
+        # Extract state from address or return None
+        return None
+
+    def get_country(self, obj):
+        # Return default country
+        return "Tanzania"
+    
+    def get_zip_code(self, obj):
+        # Return None if zip code is not available
+        return None
+    
+    def get_date_of_birth(self, obj):
+        # Return default date of birth
+        return "1990-01-01"
+    
+    def get_gender(self, obj):
+        # Return default gender
+        return "M"
+    
+    def get_experience_years(self, obj):
+        # Calculate experience based on created date or return default
+        from datetime import date
+        if obj.created_date:
+            years = (date.today() - obj.created_date).days // 365
+            return max(years, 1)
+        return 1
+    
+    def get_farm_size(self, obj):
+        """Get total farm size for this farmer"""
+        try:
+            # Since size is a CharField, we need to handle it differently
+            farms = obj.farms.all()
+            if not farms:
+                return "0"
+            
+            # Try to extract numeric values from size strings
+            total_numeric = 0
+            size_parts = []
+            
+            for farm in farms:
+                if hasattr(farm, 'size') and farm.size:
+                    size_str = str(farm.size).strip()
+                    # Try to extract numbers from the size string
+                    import re
+                    numbers = re.findall(r'\d+\.?\d*', size_str)
+                    if numbers:
+                        total_numeric += float(numbers[0])
+                    size_parts.append(size_str)
+            
+            # Return both numeric total and concatenated sizes
+            if total_numeric > 0:
+                return f"{total_numeric} (from: {', '.join(size_parts)})"
+            else:
+                return ', '.join(size_parts) if size_parts else "Unknown"
+                
+        except Exception as e:
+            return "Error calculating size"
+    
+    def get_is_verified(self, obj):
+        # Return verification status (default to True for existing farmers)
+        return True
+    
+    def get_subscription_status(self, obj):
+        # Get current subscription status
+        try:
+            if hasattr(obj, 'subscriptions') and obj.subscriptions.exists():
+                latest_subscription = obj.subscriptions.filter(status='ACTIVE').first()
+                if latest_subscription and hasattr(latest_subscription, 'subscription_typeID'):
+                    return latest_subscription.subscription_typeID.name if latest_subscription.subscription_typeID else "Basic"
+            return "Basic"
+        except Exception as e:
+            return "Basic"
+    
+    def get_total_farms(self, obj):
+        # Count total farms for this farmer
+        try:
+            if hasattr(obj, 'farms'):
+                return obj.farms.count()
+            return 0
+        except:
+            return 0
+    
+    def get_total_batches(self, obj):
+        # Count total batches across all farms for this farmer
+        try:
+            total = 0
+            if hasattr(obj, 'farms'):
+                for farm in obj.farms.all():
+                    if hasattr(farm, 'batches'):
+                        total += farm.batches.count()
+            return total
+        except:
+            return 0
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(

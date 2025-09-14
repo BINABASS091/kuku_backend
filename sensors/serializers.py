@@ -21,12 +21,37 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class SensorTypeSerializer(serializers.ModelSerializer):
     """
-    Serializer for SensorType model with validation.
+    Serializer for SensorType model with validation and computed fields.
     """
+    total_readings = serializers.SerializerMethodField()
+    active_devices_count = serializers.SerializerMethodField()
+    latest_reading_timestamp = serializers.SerializerMethodField()
+    avg_reading_value = serializers.SerializerMethodField()
+    
     class Meta:
         model = SensorType
-        fields = ['sensorTypeID', 'name', 'unit']
+        fields = ['sensorTypeID', 'name', 'unit', 'total_readings', 'active_devices_count', 
+                 'latest_reading_timestamp', 'avg_reading_value']
         read_only_fields = ['sensorTypeID']
+    
+    def get_total_readings(self, obj):
+        """Get total number of readings for this sensor type"""
+        return obj.readings.count()
+    
+    def get_active_devices_count(self, obj):
+        """Get number of active devices using this sensor type"""
+        return obj.readings.filter(deviceID__status=True).values('deviceID').distinct().count()
+    
+    def get_latest_reading_timestamp(self, obj):
+        """Get timestamp of the latest reading"""
+        latest = obj.readings.order_by('-timestamp').first()
+        return latest.timestamp if latest else None
+    
+    def get_avg_reading_value(self, obj):
+        """Get average reading value for this sensor type"""
+        from django.db.models import Avg
+        result = obj.readings.aggregate(avg_value=Avg('value'))
+        return round(result['avg_value'], 2) if result['avg_value'] else 0
         
     def validate_name(self, value):
         if not value or not value.strip():
@@ -40,73 +65,26 @@ class SensorTypeSerializer(serializers.ModelSerializer):
 
 
 class ReadingSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Reading model with validation and nested representations.
-    """
-    device = DeviceSerializer(read_only=True)
-    device_id = serializers.PrimaryKeyRelatedField(
-        queryset=Device.objects.all(),
-        source='device',
-        write_only=True,
-        help_text=_("ID of the device that generated this reading")
-    )
-    
-    sensor_type = SensorTypeSerializer(read_only=True)
-    sensor_type_id = serializers.PrimaryKeyRelatedField(
-        queryset=SensorType.objects.all(),
-        source='sensor_type',
-        write_only=True,
-        help_text=_("ID of the sensor type for this reading")
-    )
-    
+    """Reading serializer exposing legacy FK field names (deviceID, sensor_typeID)."""
+    deviceID = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), source='deviceID')
+    sensor_typeID = serializers.PrimaryKeyRelatedField(queryset=SensorType.objects.all(), source='sensor_typeID')
+    device_detail = DeviceSerializer(source='deviceID', read_only=True)
+    sensor_type_detail = SensorTypeSerializer(source='sensor_typeID', read_only=True)
+
     class Meta:
         model = Reading
         fields = [
-            'readingID', 'device', 'device_id', 'sensor_type', 'sensor_type_id', 
+            'readingID', 'deviceID', 'device_detail', 'sensor_typeID', 'sensor_type_detail',
             'value', 'timestamp'
         ]
-        read_only_fields = ['readingID']
-        
-    def validate(self, data):
-        """
-        Validate the reading data.
-        """
-        # Ensure device and sensor_type are provided for creation
-        if self.instance is None:
-            if 'device' not in data:
-                raise ValidationError({"device_id": _("This field is required.")})
-            if 'sensor_type' not in data:
-                raise ValidationError({"sensor_type_id": _("This field is required.")})
-                
-        # Validate value is within reasonable bounds
-        value = data.get('value')
-        if value is not None:
-            # Get sensor type to validate value range if needed
-            sensor_type = data.get('sensor_type') or getattr(self.instance, 'sensor_type', None)
-            if sensor_type:
-                # Example: Validate temperature range
-                if 'temp' in sensor_type.name.lower() and (value < -50 or value > 100):
-                    raise ValidationError({
-                        "value": _("Temperature value out of range (-50 to 100).")
-                    })
-                # Add more sensor-specific validations as needed
-                
-        return data
-        
-    def create(self, validated_data):
-        """
-        Create a new reading with the validated data.
-        """
+        read_only_fields = ['readingID', 'timestamp']
+
+    def validate_value(self, value):
+        sensor_type = self.initial_data.get('sensor_typeID') or getattr(self.instance, 'sensor_typeID', None)
         try:
-            return super().create(validated_data)
-        except Exception as e:
-            raise ValidationError({"detail": _("Failed to create reading: {}".format(str(e)))})
-            
-    def update(self, instance, validated_data):
-        """
-        Update an existing reading with the validated data.
-        """
-        try:
-            return super().update(instance, validated_data)
-        except Exception as e:
-            raise ValidationError({"detail": _("Failed to update reading: {}".format(str(e)))})
+            st_obj = SensorType.objects.get(pk=sensor_type) if isinstance(sensor_type, int) else sensor_type
+        except Exception:
+            st_obj = None
+        if st_obj and 'temp' in st_obj.name.lower() and (value < -50 or value > 100):
+            raise ValidationError({"value": _("Temperature value out of range (-50 to 100).")})
+        return value

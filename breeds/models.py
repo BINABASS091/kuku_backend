@@ -1,5 +1,11 @@
 from django.db import models
 
+# NOTE:
+# These models map to legacy PostgreSQL tables provided. Incremental improvements:
+# - Added CheckConstraint for BreedCondition (condictionMin <= conditionMax)
+# - Added FeedingType model to reflect feeding_type_tb (if needed later for associations)
+# Future (optional): migrate integer status fields to SmallIntegerField with choices.
+
 
 class BreedType(models.Model):
 	breed_typeID = models.AutoField(primary_key=True)
@@ -40,11 +46,15 @@ class ActivityType(models.Model):
 
 
 class BreedActivity(models.Model):
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
 	breedActivityID = models.AutoField(primary_key=True)
 	breedID = models.ForeignKey('breeds.Breed', on_delete=models.CASCADE, related_name='breed_activities', db_column='breedID')
 	activityTypeID = models.ForeignKey('breeds.ActivityType', on_delete=models.CASCADE, related_name='breed_activity_types', db_column='activityTypeID')
 	age = models.IntegerField(default=0)
-	breed_activity_status = models.IntegerField(default=1)
+	breed_activity_status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
 
 	class Meta:
 		verbose_name = 'Breed Activity'
@@ -69,17 +79,27 @@ class ConditionType(models.Model):
 
 
 class BreedCondition(models.Model):
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
 	breed_conditionID = models.AutoField(primary_key=True)
 	breedID = models.ForeignKey('breeds.Breed', on_delete=models.CASCADE, related_name='breed_conditions', db_column='breedID')
 	condictionMin = models.IntegerField(default=0)
 	conditionMax = models.IntegerField(default=0)
-	condition_status = models.IntegerField(default=1)
+	condition_status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
 	condition_typeID = models.ForeignKey('breeds.ConditionType', on_delete=models.CASCADE, related_name='breed_condition_types', db_column='condition_typeID')
 
 	class Meta:
 		verbose_name = 'Breed Condition'
 		verbose_name_plural = 'Breed Conditions'
 		unique_together = ('breedID', 'condition_typeID')
+		constraints = [
+			models.CheckConstraint(
+				check=models.Q(condictionMin__lte=models.F('conditionMax')),
+				name='breed_condition_min_le_max'
+			)
+		]
 
 	def __str__(self):
 		return f'{self.breedID} - {self.condition_typeID}'
@@ -98,9 +118,13 @@ class FoodType(models.Model):
 
 
 class BreedFeeding(models.Model):
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
 	breedFeedingID = models.AutoField(primary_key=True)
 	quantity = models.IntegerField(default=0)
-	breed_feed_status = models.IntegerField(default=1)
+	breed_feed_status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
 	breedID = models.ForeignKey('breeds.Breed', on_delete=models.CASCADE, related_name='breed_feeding_rules', db_column='breedID')
 	foodTypeID = models.ForeignKey('breeds.FoodType', on_delete=models.CASCADE, related_name='breed_feeding_types', db_column='foodTypeID')
 	age = models.IntegerField(default=0)
@@ -125,8 +149,25 @@ class BreedGrowth(models.Model):
 		verbose_name = 'Breed Growth'
 		verbose_name_plural = 'Breed Growths'
 		unique_together = ('breedID', 'age')
+		indexes = [
+			models.Index(fields=['breedID', 'age'], name='breed_growth_age_idx')
+		]
 
 	def __str__(self):
 		return f'{self.breedID} - Age {self.age} - Min Weight: {self.minWeight}'
+
+
+class FeedingType(models.Model):
+	"""Represents feeding_type_tb (legacy)."""
+	feedingTypeID = models.AutoField(primary_key=True)
+	feedingName = models.CharField(max_length=50, unique=True)
+	quanitityType = models.CharField(max_length=30)
+
+	class Meta:
+		verbose_name = 'Feeding Type'
+		verbose_name_plural = 'Feeding Types'
+
+	def __str__(self):
+		return self.feedingName
 
 # Create your models here.

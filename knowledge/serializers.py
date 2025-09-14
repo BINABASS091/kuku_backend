@@ -19,11 +19,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 class PatientHealthSerializer(serializers.ModelSerializer):
     """
-    Serializer for PatientHealth model with validation.
+    Serializer for PatientHealth model with validation and computed fields.
     """
+    exceptions_count = serializers.SerializerMethodField()
+    recommendations_affected = serializers.SerializerMethodField()
+    
     class Meta:
         model = PatientHealth
-        fields = ['id', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'description', 'created_at', 'updated_at', 'exceptions_count', 'recommendations_affected']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def validate_description(self, value):
@@ -32,19 +35,49 @@ class PatientHealthSerializer(serializers.ModelSerializer):
         if len(value) > 100:
             raise ValidationError(_("Description is too long (max 100 characters)."))
         return value.strip()
+    
+    def get_exceptions_count(self, obj):
+        """Get number of exceptions related to this health condition"""
+        return obj.exceptions.count()
+    
+    def get_recommendations_affected(self, obj):
+        """Get number of recommendations affected by this health condition"""
+        return obj.exceptions.values('recommendation').distinct().count()
 
 
 class RecommendationSerializer(serializers.ModelSerializer):
     """
-    Serializer for Recommendation model with validation.
+    Serializer for Recommendation model with validation and computed fields.
     """
+    exceptions_count = serializers.SerializerMethodField()
+    anomalies_count = serializers.SerializerMethodField()
+    reco_type_display = serializers.SerializerMethodField()
+    context_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = Recommendation
         fields = [
             'id', 'description', 'reco_type', 'context', 
-            'created_at', 'updated_at'
+            'created_at', 'updated_at', 'exceptions_count', 'anomalies_count',
+            'reco_type_display', 'context_display'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_exceptions_count(self, obj):
+        """Get number of exceptions for this recommendation"""
+        return obj.exceptions.count()
+    
+    def get_anomalies_count(self, obj):
+        """Get number of anomalies using this recommendation"""
+        return obj.anomalies.count() if hasattr(obj, 'anomalies') else 0
+    
+    def get_reco_type_display(self, obj):
+        """Get human readable recommendation type"""
+        return obj.get_reco_type_display()
+    
+    def get_context_display(self, obj):
+        """Get human readable context"""
+        return obj.get_context_display()
     
     def validate(self, data):
         """

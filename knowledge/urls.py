@@ -11,6 +11,7 @@ router.register(r'recommendations', views.RecommendationViewSet, basename='recom
 router.register(r'exception-diseases', views.ExceptionDiseaseViewSet, basename='exception-disease')
 router.register(r'anomalies', views.AnomalyViewSet, basename='anomaly')
 router.register(r'medications', views.MedicationViewSet, basename='medication')
+router.register(r'health-conditions', views.HealthConditionViewSet, basename='health-condition')
 
 urlpatterns = [
     # Include the router URLs

@@ -7,21 +7,21 @@ def get_subscription_utilization(subscription):
     Get the resource utilization for a subscription
     Returns a dictionary with hardware and software utilization
     """
-    resources = subscription.resources.filter(status=True).select_related('resource')
+    resources = subscription.resources.filter(status=True).select_related('resourceID')
     
-    hardware_count = resources.filter(resource__resource_type='HARDWARE').count()
-    software_count = resources.filter(resource__resource_type__in=['SOFTWARE', 'PREDICTION', 'ANALYTICS']).count()
+    hardware_count = resources.filter(resourceID__resource_type='HARDWARE').count()
+    software_count = resources.filter(resourceID__resource_type__in=['SOFTWARE', 'PREDICTION', 'ANALYTICS']).count()
     
     return {
         'hardware': {
             'used': hardware_count,
-            'limit': subscription.sub_type.max_hardware_nodes,
-            'available': max(0, subscription.sub_type.max_hardware_nodes - hardware_count)
+            'limit': subscription.subscription_typeID.max_hardware_nodes if subscription.subscription_typeID else 0,
+            'available': max(0, (subscription.subscription_typeID.max_hardware_nodes if subscription.subscription_typeID else 0) - hardware_count)
         },
         'software': {
             'used': software_count,
-            'limit': subscription.sub_type.max_software_services,
-            'available': max(0, subscription.sub_type.max_software_services - software_count)
+            'limit': subscription.subscription_typeID.max_software_services if subscription.subscription_typeID else 0,
+            'available': max(0, (subscription.subscription_typeID.max_software_services if subscription.subscription_typeID else 0) - software_count)
         }
     }
 
@@ -75,7 +75,7 @@ def get_available_resources(subscription):
     
     # Get all resources included in the subscription
     subscribed_resources = Resource.objects.filter(
-        allocations__farmer_subscription=subscription,
+        allocations__farmerSubscriptionID=subscription,
         allocations__status=True
     )
     
@@ -84,7 +84,7 @@ def get_available_resources(subscription):
 
 def get_subscription_resources_breakdown(subscription):
     """Get a detailed breakdown of resources in a subscription"""
-    resources = subscription.resources.filter(status=True).select_related('resource')
+    resources = subscription.resources.filter(status=True).select_related('resourceID')
     
     breakdown = {
         'hardware': [],
@@ -94,7 +94,7 @@ def get_subscription_resources_breakdown(subscription):
     }
     
     for sub_resource in resources:
-        resource = sub_resource.resource
+        resource = sub_resource.resourceID
         item = {
             'id': resource.id,
             'name': resource.name,

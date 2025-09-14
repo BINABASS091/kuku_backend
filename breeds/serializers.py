@@ -5,77 +5,141 @@ from breeds.models import (
 )
 
 class BreedTypeSerializer(serializers.ModelSerializer):
+    breeds_count = serializers.SerializerMethodField()
+    total_activities = serializers.SerializerMethodField()
+    
     class Meta:
         model = BreedType
-        fields = ['breed_typeID', 'breedType']
+        fields = ['breed_typeID', 'breedType', 'breeds_count', 'total_activities']
+    
+    def get_breeds_count(self, obj):
+        """Get total number of breeds for this breed type"""
+        return obj.breeds.count()
+    
+    def get_total_activities(self, obj):
+        """Get total activities across all breeds of this type"""
+        total = 0
+        for breed in obj.breeds.all():
+            total += breed.breed_activities.count()
+        return total
 
 class BreedSerializer(serializers.ModelSerializer):
-    # Accept FK by id on write
-    breed_type = serializers.PrimaryKeyRelatedField(queryset=BreedType.objects.all())
-    # Provide nested details on read
-    type_detail = BreedTypeSerializer(source='breed_type', read_only=True)
-
+    breed_typeID = serializers.PrimaryKeyRelatedField(queryset=BreedType.objects.all())
+    type_detail = BreedTypeSerializer(source='breed_typeID', read_only=True)
+    activities_count = serializers.SerializerMethodField()
+    conditions_count = serializers.SerializerMethodField()
+    feeding_schedules_count = serializers.SerializerMethodField()
+    growth_records_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = Breed
-        fields = ['breedID', 'breedName', 'breed_type', 'type_detail', 'preedphoto']
+        fields = ['breedID', 'breedName', 'breed_typeID', 'type_detail', 'preedphoto', 
+                 'activities_count', 'conditions_count', 'feeding_schedules_count', 'growth_records_count']
+    
+    def get_activities_count(self, obj):
+        """Get number of activities for this breed"""
+        return obj.breed_activities.count()
+    
+    def get_conditions_count(self, obj):
+        """Get number of health conditions for this breed"""
+        return obj.breed_conditions.count()
+    
+    def get_feeding_schedules_count(self, obj):
+        """Get number of feeding schedules for this breed"""
+        return obj.breed_feeding_rules.count()
+    
+    def get_growth_records_count(self, obj):
+        """Get number of growth records for this breed"""
+        return obj.breed_growth.count()
 
 class ActivityTypeSerializer(serializers.ModelSerializer):
+    total_breed_activities = serializers.SerializerMethodField()
+    
     class Meta:
         model = ActivityType
-        fields = ['activityTypeID', 'activityType']
+        fields = ['activityTypeID', 'activityType', 'total_breed_activities']
+    
+    def get_total_breed_activities(self, obj):
+        """Get total breed activities using this activity type"""
+        return obj.breed_activity_types.count()
 
 class BreedActivitySerializer(serializers.ModelSerializer):
-    # Write as PKs
-    breed = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
-    activity_type = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all())
-    # Read details
-    breed_detail = BreedSerializer(source='breed', read_only=True)
-    activity_type_detail = ActivityTypeSerializer(source='activity_type', read_only=True)
-    
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all(), source='activityTypeID')
+    breed_detail = BreedSerializer(source='breedID', read_only=True)
+    activity_type_detail = ActivityTypeSerializer(source='activityTypeID', read_only=True)
+
     class Meta:
         model = BreedActivity
-        fields = ['breedActivityID', 'breed', 'breed_detail', 'activity_type', 'activity_type_detail', 'age', 'breed_activity_status']
+        fields = ['breedActivityID', 'breedID', 'breed_detail', 'activityTypeID', 'activity_type_detail', 'age', 'breed_activity_status']
 
 class ConditionTypeSerializer(serializers.ModelSerializer):
+    breed_conditions_count = serializers.SerializerMethodField()
+    active_conditions_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = ConditionType
-        fields = ['condition_typeID', 'name']
+        fields = ['condition_typeID', 'name', 'breed_conditions_count', 'active_conditions_count']
+    
+    def get_breed_conditions_count(self, obj):
+        """Get total breed conditions using this condition type"""
+        return obj.breed_condition_types.count()
+    
+    def get_active_conditions_count(self, obj):
+        """Get active breed conditions for this type"""
+        return obj.breed_condition_types.filter(condition_status=1).count()
 
 class BreedConditionSerializer(serializers.ModelSerializer):
-    # Write as PKs
-    breed = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
-    condition_type = serializers.PrimaryKeyRelatedField(queryset=ConditionType.objects.all())
-    # Read details
-    breed_detail = BreedSerializer(source='breed', read_only=True)
-    condition_type_detail = ConditionTypeSerializer(source='condition_type', read_only=True)
-    
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    condition_typeID = serializers.PrimaryKeyRelatedField(queryset=ConditionType.objects.all(), source='condition_typeID')
+    breed_detail = BreedSerializer(source='breedID', read_only=True)
+    condition_type_detail = ConditionTypeSerializer(source='condition_typeID', read_only=True)
+    condition_range = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
+
     class Meta:
         model = BreedCondition
-        fields = ['breed_conditionID', 'breed', 'breed_detail', 'condition_type', 'condition_type_detail', 'condictionMin', 'conditionMax', 'condition_status']
+        fields = ['breed_conditionID', 'breedID', 'breed_detail', 'condition_typeID', 'condition_type_detail', 
+                 'condictionMin', 'conditionMax', 'condition_status', 'condition_range', 'status_display']
+    
+    def get_condition_range(self, obj):
+        """Get formatted condition range"""
+        return f"{obj.condictionMin} - {obj.conditionMax}"
+    
+    def get_status_display(self, obj):
+        """Get human readable status"""
+        return "Active" if obj.condition_status == 1 else "Inactive"
 
 class FoodTypeSerializer(serializers.ModelSerializer):
+    feeding_schedules_count = serializers.SerializerMethodField()
+    breeds_using_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = FoodType
-        fields = ['foodTypeID', 'name']
+        fields = ['foodTypeID', 'name', 'feeding_schedules_count', 'breeds_using_count']
+    
+    def get_feeding_schedules_count(self, obj):
+        """Get total feeding schedules using this food type"""
+        return obj.breed_feeding_types.count()
+    
+    def get_breeds_using_count(self, obj):
+        """Get unique breeds using this food type"""
+        return obj.breed_feeding_types.values('breedID').distinct().count()
 
 class BreedFeedingSerializer(serializers.ModelSerializer):
-    # Write as PKs
-    breed = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
-    food_type = serializers.PrimaryKeyRelatedField(queryset=FoodType.objects.all())
-    # Read details
-    breed_detail = BreedSerializer(source='breed', read_only=True)
-    food_type_detail = FoodTypeSerializer(source='food_type', read_only=True)
-    
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    foodTypeID = serializers.PrimaryKeyRelatedField(queryset=FoodType.objects.all(), source='foodTypeID')
+    breed_detail = BreedSerializer(source='breedID', read_only=True)
+    food_type_detail = FoodTypeSerializer(source='foodTypeID', read_only=True)
+
     class Meta:
         model = BreedFeeding
-        fields = ['breedFeedingID', 'breed', 'breed_detail', 'food_type', 'food_type_detail', 'age', 'quantity', 'frequency', 'breed_feed_status']
+        fields = ['breedFeedingID', 'breedID', 'breed_detail', 'foodTypeID', 'food_type_detail', 'age', 'quantity', 'frequency', 'breed_feed_status']
 
 class BreedGrowthSerializer(serializers.ModelSerializer):
-    # Write as PK
-    breed = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
-    # Read details
-    breed_detail = BreedSerializer(source='breed', read_only=True)
-    
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    breed_detail = BreedSerializer(source='breedID', read_only=True)
+
     class Meta:
         model = BreedGrowth
-        fields = ['breedGrowthID', 'breed', 'breed_detail', 'age', 'minWeight']
+        fields = ['breedGrowthID', 'breedID', 'breed_detail', 'age', 'minWeight']

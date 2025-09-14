@@ -1,48 +1,75 @@
 from rest_framework import serializers
 from batches.models import Batch, ActivitySchedule, BatchActivity, BatchFeeding
 from farms.models import Farm
-from breeds.models import Breed, BreedActivity
-from breeds.serializers import BreedSerializer as BreedDetailSerializer
+from breeds.models import Breed, BreedActivity, ActivityType
+from breeds.serializers import BreedSerializer as LegacyBreedSerializer
+
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farm
         fields = ['farmID', 'name', 'location']
 
-# Use the detailed Breed serializer from breeds app (includes type_detail)
-BreedSerializer = BreedDetailSerializer
+
+class BreedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Breed
+        fields = ['breedID', 'breedName']
+
 
 class BreedActivitySerializer(serializers.ModelSerializer):
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all(), source='activityTypeID')
+
     class Meta:
         model = BreedActivity
-        fields = ['breedActivityID', 'breed', 'activity_type', 'age', 'breed_activity_status']
+        fields = ['breedActivityID', 'breedID', 'activityTypeID', 'age', 'breed_activity_status']
+        read_only_fields = ['breedActivityID']
+
 
 class BatchSerializer(serializers.ModelSerializer):
-    farm = FarmSerializer(read_only=True)
-    breed = BreedSerializer(read_only=True)
-    
+    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all(), source='farmID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    # Use actual DB column names (arriveDate, initAge, harvestAge, initWeight)
+
     class Meta:
         model = Batch
-        fields = ['batchID', 'farm', 'breed', 'arrive_date', 'init_age', 'harvest_age', 'quanitity', 'init_weight', 'batch_status']
+        fields = [
+            'batchID', 'farmID', 'breedID', 'arriveDate', 'initAge', 'harvestAge',
+            'quanitity', 'initWeight', 'batch_status'
+        ]
+        read_only_fields = ['batchID']
+
 
 class ActivityScheduleSerializer(serializers.ModelSerializer):
-    batch = BatchSerializer(read_only=True)
-    
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
+
     class Meta:
         model = ActivitySchedule
-        fields = ['activityID', 'batch', 'activityName', 'activityDescription', 'activityDay', 'activity_status', 'activity_frequency']
+        fields = [
+            'activityID', 'batchID', 'activityName', 'activityDescription',
+            'activityDay', 'activity_status', 'activity_frequency'
+        ]
+        read_only_fields = ['activityID']
+
 
 class BatchActivitySerializer(serializers.ModelSerializer):
-    batch = BatchSerializer(read_only=True)
-    breed_activity = BreedActivitySerializer(read_only=True)
-    
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
+    breedActivityID = serializers.PrimaryKeyRelatedField(queryset=BreedActivity.objects.all(), source='breedActivityID')
+
     class Meta:
         model = BatchActivity
-        fields = ['batchActivityID', 'batch', 'breed_activity', 'batchActivityName', 'batchActivityDate', 'batchActivityDetails', 'batchAcitivtyCost']
+        fields = [
+            'batchActivityID', 'batchID', 'breedActivityID', 'batchActivityName',
+            'batchActivityDate', 'batchActivityDetails', 'batchAcitivtyCost'
+        ]
+        read_only_fields = ['batchActivityID']
+
 
 class BatchFeedingSerializer(serializers.ModelSerializer):
-    batch = BatchSerializer(read_only=True)
-    
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
+
     class Meta:
         model = BatchFeeding
-        fields = ['batchFeedingID', 'batch', 'feedingDate', 'feedingAmount', 'status']
+        fields = ['batchFeedingID', 'batchID', 'feedingDate', 'feedingAmount', 'status']
+        read_only_fields = ['batchFeedingID']

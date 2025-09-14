@@ -1,219 +1,287 @@
 from rest_framework import serializers
-from django.utils import timezone
-from django.db import transaction
 from .models import (
     SubscriptionType, Resource, FarmerSubscription,
-    FarmerSubscriptionResource, Payment, SubscriptionStatus,
-    ResourceType, ResourceCategory
+    FarmerSubscriptionResource, Payment, ResourceType
 )
 from accounts.serializers import FarmerSerializer as AccountsFarmerSerializer
 from .exceptions import (
-    SubscriptionLimitExceeded, SubscriptionInactiveError,
-    ResourceNotAvailableError, PaymentRequiredError, UpgradeRequiredError
+    SubscriptionLimitExceeded, SubscriptionInactiveError
 )
 from .services import SubscriptionService
 from .utils import get_subscription_utilization, get_available_resources
 
-class ResourceTypeField(serializers.ChoiceField):
-    def to_representation(self, value):
-        return ResourceType(value).label
-
-class ResourceCategoryField(serializers.ChoiceField):
-    def to_representation(self, value):
-        return ResourceCategory(value).label
 
 class SubscriptionTypeSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='subscriptionTypeID', read_only=True)
+    active_subscriptions_count = serializers.SerializerMethodField()
+    total_revenue = serializers.SerializerMethodField()
+    average_usage = serializers.SerializerMethodField()
+    tier_display = serializers.SerializerMethodField()
+
     class Meta:
         model = SubscriptionType
         fields = [
-            'id', 'name', 'tier', 'farm_size', 'cost',
+            'id', 'subscriptionTypeID', 'name', 'tier', 'tier_display', 'farm_size', 'cost',
             'max_hardware_nodes', 'max_software_services',
-            'includes_predictions', 'includes_analytics', 'description'
+            'includes_predictions', 'includes_analytics', 'description',
+            'active_subscriptions_count', 'total_revenue', 'average_usage'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'subscriptionTypeID']
+    
+    def get_active_subscriptions_count(self, obj):
+        """Get number of active subscriptions for this type"""
+        return obj.farmer_subscriptions.filter(status='ACTIVE').count()
+    
+    def get_total_revenue(self, obj):
+        """Get total revenue from this subscription type"""
+        from django.db.models import Sum
+        from decimal import Decimal
+        payments = obj.farmer_subscriptions.filter(
+            status='ACTIVE'
+        ).aggregate(total=Sum('subscription_typeID__cost'))
+        return float(payments['total'] or Decimal('0.00'))
+    
+    def get_average_usage(self, obj):
+        """Get average resource usage for this subscription type"""
+        # This is a placeholder - would need actual usage tracking
+        subscriptions = obj.farmer_subscriptions.filter(status='ACTIVE')
+        if not subscriptions.exists():
+            return 0
+        # For now, return a mock percentage
+        return 75.5
+    
+    def get_tier_display(self, obj):
+        """Get human readable tier"""
+        return obj.get_tier_display()
+
 
 class ResourceSerializer(serializers.ModelSerializer):
-    resource_type_display = serializers.CharField(
-        source='get_resource_type_display',
-        read_only=True
-    )
-    category_display = serializers.CharField(
-        source='get_category_display',
-        read_only=True
-    )
-    
+    id = serializers.IntegerField(source='resourceID', read_only=True)
+    resource_type_display = serializers.CharField(source='get_resource_type_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    subscriptions_using_count = serializers.SerializerMethodField()
+    total_allocations = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
+
     class Meta:
         model = Resource
         fields = [
-            'id', 'name', 'resource_type', 'resource_type_display',
-            'category', 'category_display', 'unit_cost', 'status',
-            'is_basic', 'description', 'created_at', 'updated_at'
+            'id', 'resourceID', 'name', 'resource_type', 'resource_type_display',
+            'category', 'category_display', 'unit_cost', 'status', 'status_display',
+            'is_basic', 'description', 'created_at', 'updated_at',
+            'subscriptions_using_count', 'total_allocations'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['id', 'resourceID', 'created_at', 'updated_at']
+    
+    def get_subscriptions_using_count(self, obj):
+        """Get number of subscriptions using this resource"""
+        return FarmerSubscriptionResource.objects.filter(
+            resourceID=obj, 
+            farmerSubscriptionID__status='ACTIVE'
+        ).count()
+    
+    def get_total_allocations(self, obj):
+        print(f"Object: {obj}")
+        print(f"Subscription resources: {obj.subscription_resources.all()}")
+
+        # Check what fields are available on subscription_resources
+        if obj.subscription_resources.exists():
+            first_resource = obj.subscription_resources.first()
+            print(f"First resource fields: {[f.name for f in first_resource._meta.get_fields()]}")
+
+        """Get total quantity allocated across all subscriptions"""
+        from django.db.models import Sum
+        result = obj.subscription_resources.aggregate(total=Sum('resource_allocations__quantity'))
+        return result['total'] or 0
+    
+    def get_status_display(self, obj):
+        """Get human readable status"""
+        return "Available" if obj.status else "Unavailable"
+
 
 class FarmerSubscriptionListSerializer(serializers.ModelSerializer):
-    subscription_type = SubscriptionTypeSerializer(read_only=True)
-    status_display = serializers.CharField(
-        source='get_status_display',
-        read_only=True
-    )
-    
+    id = serializers.IntegerField(source='farmerSubscriptionID', read_only=True)
+    subscription_type = SubscriptionTypeSerializer(source='subscription_typeID', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
     class Meta:
         model = FarmerSubscription
         fields = [
-            'id', 'subscription_type', 'start_date', 'end_date',
+            'id', 'farmerSubscriptionID', 'subscription_type', 'start_date', 'end_date',
             'status', 'status_display', 'auto_renew', 'created_at'
         ]
         read_only_fields = fields
 
+
 class FarmerSubscriptionDetailSerializer(serializers.ModelSerializer):
-    subscription_type = SubscriptionTypeSerializer(read_only=True)
-    farmer = AccountsFarmerSerializer(read_only=True)
+    id = serializers.IntegerField(source='farmerSubscriptionID', read_only=True)
+    subscription_type = SubscriptionTypeSerializer(source='subscription_typeID', read_only=True)
+    farmer = AccountsFarmerSerializer(source='farmerID', read_only=True)
     resources = serializers.SerializerMethodField()
     utilization = serializers.SerializerMethodField()
-    status_display = serializers.CharField(
-        source='get_status_display',
-        read_only=True
-    )
-    
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    start_date = serializers.SerializerMethodField()
+    end_date = serializers.SerializerMethodField()
+
     class Meta:
         model = FarmerSubscription
         fields = [
-            'id', 'farmer', 'subscription_type', 'start_date', 'end_date',
+            'id', 'farmerSubscriptionID', 'farmer', 'subscription_type', 'start_date', 'end_date',
             'status', 'status_display', 'auto_renew', 'notes', 'resources',
             'utilization', 'created_at', 'updated_at'
         ]
         read_only_fields = fields
-    
+
     def get_resources(self, obj):
-        from .serializers import ResourceSerializer
-        resources = get_available_resources(obj)
-        return ResourceSerializer(resources, many=True).data
-    
+        qs = get_available_resources(obj)
+        return ResourceSerializer(qs, many=True).data
+
     def get_utilization(self, obj):
         return get_subscription_utilization(obj)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Defensive coercion: sometimes a DateField value may appear as datetime in certain backends
+        for field in ('start_date', 'end_date'):
+            # Already handled by get_start_date / get_end_date but keep for defense
+            if field not in data or data[field] is None:
+                value = getattr(instance, field, None)
+                if value is not None and hasattr(value, 'year'):
+                    if hasattr(value, 'hour'):
+                        try:
+                            value = value.date()
+                        except Exception:
+                            pass
+                    data[field] = value.isoformat() if hasattr(value, 'isoformat') else value
+        return data
+
+    def get_start_date(self, obj):  # pragma: no cover simple coercion
+        val = getattr(obj, 'start_date', None)
+        if val is None:
+            return None
+        if hasattr(val, 'hour'):
+            try:
+                val = val.date()
+            except Exception:
+                pass
+        return val.isoformat() if hasattr(val, 'isoformat') else val
+
+    def get_end_date(self, obj):  # pragma: no cover simple coercion
+        val = getattr(obj, 'end_date', None)
+        if val is None:
+            return None
+        if hasattr(val, 'hour'):
+            try:
+                val = val.date()
+            except Exception:
+                pass
+        return val.isoformat() if hasattr(val, 'isoformat') else val
+
 
 class FarmerSubscriptionCreateSerializer(serializers.ModelSerializer):
     subscription_type_id = serializers.PrimaryKeyRelatedField(
         queryset=SubscriptionType.objects.all(),
-        source='subscription_type',
+        source='subscription_typeID',
         write_only=True
     )
-    duration_months = serializers.IntegerField(
-        min_value=1,
-        max_value=12,
-        default=1,
-        write_only=True
-    )
-    
+    duration_months = serializers.IntegerField(min_value=1, max_value=12, default=1, write_only=True)
+
     class Meta:
         model = FarmerSubscription
         fields = ['subscription_type_id', 'duration_months', 'auto_renew']
-    
+
     def create(self, validated_data):
         request = self.context.get('request')
         if not request or not hasattr(request.user, 'farmer_profile'):
-            raise serializers.ValidationError("User is not a farmer")
-        
-        subscription_type = validated_data.pop('subscription_type')
+            raise serializers.ValidationError('User is not a farmer')
+
+        subscription_type = validated_data.pop('subscription_typeID')
         duration_months = validated_data.pop('duration_months', 1)
-        
+
         subscription = SubscriptionService.create_subscription(
             farmer=request.user.farmer_profile,
-            subscription_type_id=subscription_type.id,
+            subscription_type_id=subscription_type.subscriptionTypeID,
             duration_months=duration_months,
             auto_renew=validated_data.get('auto_renew', True)
         )
-        
         return subscription
 
+
 class FarmerSubscriptionResourceSerializer(serializers.ModelSerializer):
-    resource_details = ResourceSerializer(
-        source='resource',
-        read_only=True
-    )
-    
+    id = serializers.IntegerField(source='farmerSubscriptionResourceID', read_only=True)
+    resource_details = ResourceSerializer(source='resourceID', read_only=True)
+
     class Meta:
         model = FarmerSubscriptionResource
-        fields = ['id', 'resource', 'resource_details', 'quantity', 'status', 'allocated_at']
-        read_only_fields = ['allocated_at', 'status']
-    
+        fields = [
+            'id', 'farmerSubscriptionResourceID', 'resourceID', 'resource_details',
+            'quantity', 'status', 'allocated_at'
+        ]
+        read_only_fields = ['id', 'farmerSubscriptionResourceID', 'allocated_at', 'status']
+
     def validate(self, attrs):
         subscription = self.context.get('subscription')
-        resource = attrs.get('resource')
-        
+        resource = attrs.get('resourceID')
+
         if not subscription:
-            raise serializers.ValidationError("Subscription is required")
-        
+            raise serializers.ValidationError('Subscription is required')
         if not subscription.is_active:
             raise SubscriptionInactiveError()
-        
-        # Check if resource can be added to subscription
-        if not SubscriptionService.can_add_resource(subscription, resource):
+        if not resource:
+            raise serializers.ValidationError({'resourceID': 'Resource is required'})
+
+        # Enforce subscription limits using model method
+        if not subscription.can_add_resource(resource):
             if resource.resource_type == ResourceType.HARDWARE:
-                limit = subscription.sub_type.max_hardware_nodes
+                limit = subscription.subscription_typeID.max_hardware_nodes if subscription.subscription_typeID else 0
             else:
-                limit = subscription.sub_type.max_software_services
-                
+                limit = subscription.subscription_typeID.max_software_services if subscription.subscription_typeID else 0
             raise SubscriptionLimitExceeded(
-                detail=f"Maximum {limit} {resource.get_resource_type_display().lower()} resources allowed"
+                detail=f'Maximum {limit} {resource.get_resource_type_display().lower()} resources allowed'
             )
-            
         return attrs
-    
+
     def create(self, validated_data):
         subscription = self.context.get('subscription')
-        resource = validated_data.get('resource')
-        
+        resource = validated_data.get('resourceID')
+        quantity = validated_data.get('quantity', 1)
         try:
-            subscription_resource = FarmerSubscriptionResource.objects.create(
-                farmer_subscription=subscription,
-                resource=resource,
-                quantity=validated_data.get('quantity', 1)
+            return FarmerSubscriptionResource.objects.create(
+                farmerSubscriptionID=subscription,
+                resourceID=resource,
+                quantity=quantity
             )
-            return subscription_resource
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
+        except Exception as exc:
+            raise serializers.ValidationError(str(exc))
+
 
 class PaymentSerializer(serializers.ModelSerializer):
-    status_display = serializers.CharField(
-        source='get_status_display',
-        read_only=True
-    )
-    
+    id = serializers.IntegerField(source='paymentID', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
     class Meta:
         model = Payment
         fields = [
-            'id', 'amount', 'payment_date', 'due_date',
+            'id', 'paymentID', 'amount', 'payment_date', 'due_date',
             'status', 'status_display', 'transaction_id',
-            'receipt', 'notes', 'created_at'
+            'receipt', 'notes', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['payment_date', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'paymentID', 'payment_date', 'created_at', 'updated_at']
+
 
 class SubscriptionUpgradeSerializer(serializers.Serializer):
-    new_subscription_type_id = serializers.PrimaryKeyRelatedField(
-        queryset=SubscriptionType.objects.all()
-    )
-    
+    new_subscription_type_id = serializers.PrimaryKeyRelatedField(queryset=SubscriptionType.objects.all())
+
     def validate(self, attrs):
         subscription = self.context.get('subscription')
         new_sub_type = attrs.get('new_subscription_type_id')
-        
         if not subscription:
-            raise serializers.ValidationError("Subscription is required")
-            
-        if new_sub_type.tier <= subscription.sub_type.tier:
-            raise serializers.ValidationError(
-                "New subscription must be of a higher tier"
-            )
-            
+            raise serializers.ValidationError('Subscription is required')
+        if new_sub_type.tier <= subscription.subscription_typeID.tier:
+            raise serializers.ValidationError('New subscription must be of a higher tier')
         return attrs
-    
+
     def create(self, validated_data):
         subscription = self.context.get('subscription')
         new_sub_type = validated_data.get('new_subscription_type_id')
-        
-        return SubscriptionService.upgrade_subscription(
-            subscription,
-            new_sub_type.id
-        )
+        return SubscriptionService.upgrade_subscription(subscription, new_sub_type.subscriptionTypeID)

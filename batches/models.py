@@ -1,16 +1,23 @@
 from django.db import models
+from django.utils import timezone
+from decimal import Decimal
 
 
 class Batch(models.Model):
-	batchID = models.IntegerField(unique=True)  # Will become primary key after migration
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
+	# Use legacy column name as primary key for alignment
+	batchID = models.AutoField(primary_key=True, db_column='batchID')
 	farmID = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='batches', db_column='farmID', null=True, blank=True)
 	breedID = models.ForeignKey('breeds.Breed', on_delete=models.CASCADE, related_name='batches', db_column='breedID', null=True, blank=True)
-	arriveDate = models.DateField(default='1900-01-01')
-	initAge = models.IntegerField(default=0)
-	harvestAge = models.IntegerField(default=0)
-	quanitity = models.IntegerField(default=0)  # Note: keeping original spelling from PostgreSQL schema
-	initWeight = models.IntegerField(default=0)
-	batch_status = models.IntegerField(default=1)
+	arriveDate = models.DateField(default=timezone.now)  # Replaces sentinel date
+	initAge = models.PositiveIntegerField(default=0)
+	harvestAge = models.PositiveIntegerField(default=0)
+	quanitity = models.PositiveIntegerField(default=0)  # legacy spelling retained
+	initWeight = models.PositiveIntegerField(default=0)
+	batch_status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
 
 	class Meta:
 		verbose_name = 'Batch'
@@ -21,13 +28,17 @@ class Batch(models.Model):
 
 
 class ActivitySchedule(models.Model):
-	activityID = models.IntegerField(unique=True)  # Will become primary key after migration
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
+	activityID = models.AutoField(primary_key=True, db_column='activityID')
 	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='schedules', db_column='batchID', null=True, blank=True)
-	activityName = models.CharField(max_length=100, default='Default Activity')
-	activityDescription = models.CharField(max_length=300, default='No description')
-	activityDay = models.CharField(max_length=10, default='Day')
-	activity_status = models.IntegerField(default=1)
-	activity_frequency = models.IntegerField(default=1)
+	activityName = models.CharField(max_length=100)
+	activityDescription = models.CharField(max_length=300, blank=True, default='')
+	activityDay = models.CharField(max_length=10)
+	activity_status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
+	activity_frequency = models.PositiveIntegerField(default=1)
 
 	class Meta:
 		verbose_name = 'Activity Schedule'
@@ -38,13 +49,13 @@ class ActivitySchedule(models.Model):
 
 
 class BatchActivity(models.Model):
-	batchActivityID = models.IntegerField(unique=True, default=0)  # Will become primary key after migration
+	batchActivityID = models.AutoField(primary_key=True, db_column='batchActivityID')
 	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='activities', db_column='batchID', null=True, blank=True)
 	breedActivityID = models.ForeignKey('breeds.BreedActivity', on_delete=models.CASCADE, related_name='batch_activities', db_column='breedActivityID', null=True, blank=True)
-	batchActivityName = models.CharField(max_length=100, default='Default Batch Activity')
-	batchActivityDate = models.DateField(default='1900-01-01')
-	batchActivityDetails = models.CharField(max_length=50, default='No details')
-	batchAcitivtyCost = models.IntegerField(default=0)  # Note: keeping original spelling from PostgreSQL schema
+	batchActivityName = models.CharField(max_length=100)
+	batchActivityDate = models.DateField(default=timezone.now)
+	batchActivityDetails = models.CharField(max_length=100, blank=True, default='')
+	batchAcitivtyCost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))  # legacy spelling retained
 
 	class Meta:
 		verbose_name = 'Batch Activity'
@@ -55,11 +66,15 @@ class BatchActivity(models.Model):
 
 
 class BatchFeeding(models.Model):
-	batchFeedingID = models.IntegerField(unique=True)  # Will become primary key after migration
+	class Status(models.IntegerChoices):
+		ACTIVE = 1, 'Active'
+		INACTIVE = 0, 'Inactive'
+		ARCHIVED = 9, 'Archived'
+	batchFeedingID = models.AutoField(primary_key=True, db_column='batchFeedingID')
 	batchID = models.ForeignKey('batches.Batch', on_delete=models.CASCADE, related_name='feedings', db_column='batchID', null=True, blank=True)
-	feedingDate = models.DateField(default='CURRENT_DATE')
-	feedingAmount = models.IntegerField(default=0)
-	status = models.IntegerField(default=1)
+	feedingDate = models.DateField(default=timezone.now)
+	feedingAmount = models.PositiveIntegerField(default=0)
+	status = models.SmallIntegerField(choices=Status.choices, default=Status.ACTIVE)
 
 	class Meta:
 		verbose_name = 'Batch Feeding'

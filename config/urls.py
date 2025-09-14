@@ -15,19 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.urls import include, re_path
+from django.urls import path, include
 from django.conf import settings
-from django.views.generic import RedirectView
 from .views import APIRootView
 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenRefreshView  # type: ignore
+from accounts.auth import RoleTokenObtainPairView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView  # type: ignore
 
-# API URLS
+# API URLS (grouped for clarity)
 api_patterns = [
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -36,7 +32,7 @@ api_patterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # Authentication
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/', RoleTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # API v1
@@ -51,7 +47,11 @@ urlpatterns = [
 
 # Include debug toolbar URLs only in development
 if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [
-        path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+    try:
+        import debug_toolbar  # type: ignore
+    except ImportError:
+        debug_toolbar = None  # Optional dependency
+    else:
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns

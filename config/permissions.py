@@ -35,12 +35,12 @@ class IsFarmerOrAdmin(BasePermission):
                 return obj.farmer == request.user.farmer_profile
                 
             # Check if the object is related to a subscription owned by the farmer
-            if hasattr(obj, 'farmer_subscription'):
-                return obj.farmer_subscription.farmer == request.user.farmer_profile
+            if hasattr(obj, 'farmerSubscriptionID'):
+                return obj.farmerSubscriptionID.farmerID == request.user.farmer_profile
                 
             # Check if the object is a payment for a subscription owned by the farmer
-            if hasattr(obj, 'subscription'):
-                return obj.subscription.farmer == request.user.farmer_profile
+            if hasattr(obj, 'farmerSubscriptionID'):
+                return obj.farmerSubscriptionID.farmerID == request.user.farmer_profile
                 
         return False
 
@@ -73,15 +73,15 @@ class IsSubscriptionOwner(BasePermission):
         # Check if the user is a farmer and owns the subscription
         if hasattr(request.user, 'farmer_profile'):
             # For subscription resources, check the associated subscription
-            if hasattr(obj, 'farmer_subscription'):
-                return obj.farmer_subscription.farmer == request.user.farmer_profile
+            if hasattr(obj, 'farmerSubscriptionID'):
+                return obj.farmerSubscriptionID.farmerID == request.user.farmer_profile
                 
             # For subscriptions, check direct ownership
-            if hasattr(obj, 'farmer'):
-                return obj.farmer == request.user.farmer_profile
+            if hasattr(obj, 'farmerID'):
+                return obj.farmerID == request.user.farmer_profile
                 
             # For payments, check the associated subscription
-            if hasattr(obj, 'subscription'):
-                return obj.subscription.farmer == request.user.farmer_profile
+            if hasattr(obj, 'farmerSubscriptionID'):
+                return obj.farmerSubscriptionID.farmerID == request.user.farmer_profile
                 
         return False

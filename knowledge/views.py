@@ -8,6 +8,8 @@ from knowledge.serializers import (
     PatientHealthSerializer, RecommendationSerializer, ExceptionDiseaseSerializer,
     AnomalySerializer, MedicationSerializer
 )
+from django.db.models import Sum, F, FloatField
+from django.db.models.functions import Coalesce
 
 # Create your views here.
 
@@ -100,3 +102,27 @@ class MedicationViewSet(viewsets.ModelViewSet):
             'recommendation',
             'user'
         ).all()
+
+class HealthConditionViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows health conditions to be viewed or edited.
+    """
+    queryset = PatientHealth.objects.all()
+    serializer_class = PatientHealthSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Return a queryset with all health conditions.
+        """
+        return PatientHealth.objects.all()
+
+    def get_total_allocations(self, obj):
+        try:
+            # Aggregate over resource_allocations and sum the quantity field
+            result = obj.resource_allocations.aggregate(total=Sum('quantity'))
+            return result['total'] or 0
+        except Exception as e:
+            # Log the error for debugging purposes
+            print(f"Error in get_total_allocations: {e}")
+            return 0

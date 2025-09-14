@@ -1,16 +1,17 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, permissions, status, mixins
+from rest_framework import viewsets, permissions, status, mixins, serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils import timezone
 
 from subscriptions.models import (
-    SubscriptionType, Resource, FarmerSubscription, 
-    FarmerSubscriptionResource, Payment, SubscriptionStatus, ResourceType
+    SubscriptionType, Resource, FarmerSubscription,
+    FarmerSubscriptionResource, Payment, SubscriptionStatus
 )
 from subscriptions.serializers import (
-    SubscriptionTypeSerializer, ResourceSerializer, 
+    SubscriptionTypeSerializer, ResourceSerializer,
     FarmerSubscriptionListSerializer, FarmerSubscriptionDetailSerializer,
     FarmerSubscriptionCreateSerializer, FarmerSubscriptionResourceSerializer,
     PaymentSerializer, SubscriptionUpgradeSerializer
@@ -47,7 +48,7 @@ class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
         farmer = user.farmer_profile
         try:
             subscription = FarmerSubscription.objects.get(
-                farmer=farmer,
+                farmerID=farmer,
                 status=SubscriptionStatus.ACTIVE,
                 end_date__gte=timezone.now().date()
             )
@@ -76,21 +77,22 @@ class FarmerSubscriptionViewSet(
     API endpoint for managing farmer subscriptions.
     """
     permission_classes = [permissions.IsAuthenticated, IsFarmerOrAdmin]
+    lookup_field = 'farmerSubscriptionID'
     
     def get_queryset(self):
         user = self.request.user
         queryset = FarmerSubscription.objects.all()
-        
+
         # Admins can see all subscriptions
         if user.is_staff or user.is_superuser:
-            return queryset.prefetch_related('resources__resource')
-            
+            return queryset.prefetch_related('resources__resourceID')
+
         # Farmers can only see their own subscriptions
         if hasattr(user, 'farmer_profile'):
             return queryset.filter(
-                farmer=user.farmer_profile
-            ).prefetch_related('resources__resource')
-            
+                farmerID=user.farmer_profile
+            ).prefetch_related('resources__resourceID')
+
         return queryset.none()
         
     def get_serializer_class(self):
@@ -100,11 +102,32 @@ class FarmerSubscriptionViewSet(
             return FarmerSubscriptionDetailSerializer
         elif self.action == 'create':
             return FarmerSubscriptionCreateSerializer
+        elif self.action == 'upgrade':
+            return SubscriptionUpgradeSerializer
         return FarmerSubscriptionListSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if getattr(self, 'action', None) == 'upgrade':
+            lookup_key = self.lookup_field or 'pk'
+            if lookup_key in self.kwargs:
+                try:
+                    context['subscription'] = self.get_object()
+                except Exception:
+                    print('DEBUG upgrade context: failed to resolve subscription with kwargs', self.kwargs)
+        return context
         
     def perform_create(self, serializer):
         # The create logic is handled in the serializer
         return super().perform_create(serializer)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        subscription = serializer.save()
+        detail = FarmerSubscriptionDetailSerializer(subscription, context={'request': request})
+        headers = self.get_success_headers(detail.data)
+        return Response(detail.data, status=status.HTTP_201_CREATED, headers=headers)
     
     @action(detail=True, methods=['get'])
     def resources(self, request, pk=None):
@@ -121,23 +144,20 @@ class FarmerSubscriptionViewSet(
         return Response(get_subscription_utilization(subscription))
     
     @action(detail=True, methods=['post'], serializer_class=SubscriptionUpgradeSerializer)
-    def upgrade(self, request, pk=None):
-        """Upgrade to a higher subscription tier."""
+    def upgrade(self, request, farmerSubscriptionID=None):  # farmerSubscriptionID matches lookup_field
+        """Upgrade to a higher subscription tier (direct service path)."""
         subscription = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
+        new_type_id = request.data.get('new_subscription_type_id')
+        if not new_type_id:
+            return Response({'detail': 'new_subscription_type_id is required'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            new_subscription = serializer.save(subscription=subscription)
-            return Response(
-                FarmerSubscriptionDetailSerializer(new_subscription).data,
-                status=status.HTTP_200_OK
-            )
-        except Exception as e:
-            return Response(
-                {'detail': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            new_subscription = SubscriptionService.upgrade_subscription(subscription, new_type_id)
+        except ValidationError as ve:
+            return Response({'detail': str(ve.detail if hasattr(ve, 'detail') else ve)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:  # pragma: no cover
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        data = FarmerSubscriptionDetailSerializer(new_subscription).data
+        return Response(data, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -164,55 +184,66 @@ class FarmerSubscriptionResourceViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
-    """
-    API endpoint for managing resources within a subscription.
-    """
+    # Provide base queryset so router/action introspection works for all methods (including POST)
+    queryset = FarmerSubscriptionResource.objects.all()
     serializer_class = FarmerSubscriptionResourceSerializer
     permission_classes = [permissions.IsAuthenticated, IsSubscriptionOwner]
-    
+    # Explicitly declare allowed methods to avoid 405 if Django/DRF infers incorrectly
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
     def get_queryset(self):
-        subscription_id = self.kwargs.get('subscription_pk')
+        # NestedSimpleRouter builds kwarg name as <lookup>_<parent_lookup_field>
+        # Parent lookup name: 'subscription'; parent lookup_field on viewset: farmerSubscriptionID
+        subscription_id = (
+            self.kwargs.get('subscription_farmerSubscriptionID') or  # correct key from router
+            self.kwargs.get('subscription_farmersubscriptionID') or   # legacy/mistyped fallback
+            self.kwargs.get('subscription_pk')  # generic fallback
+        )
         return FarmerSubscriptionResource.objects.filter(
-            farmer_subscription_id=subscription_id
-        ).select_related('resource')
-    
+            farmerSubscriptionID_id=subscription_id
+        ).select_related('resourceID')
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
+        subscription_id = (
+            self.kwargs.get('subscription_farmerSubscriptionID') or
+            self.kwargs.get('subscription_farmersubscriptionID') or
+            self.kwargs.get('subscription_pk')
+        )
         context['subscription'] = get_object_or_404(
             FarmerSubscription,
-            pk=self.kwargs.get('subscription_pk')
+            pk=subscription_id
         )
         return context
-    
+
     def perform_create(self, serializer):
+        subscription_id = (
+            self.kwargs.get('subscription_farmerSubscriptionID') or
+            self.kwargs.get('subscription_farmersubscriptionID') or
+            self.kwargs.get('subscription_pk')
+        )
         subscription = get_object_or_404(
             FarmerSubscription,
-            pk=self.kwargs.get('subscription_pk')
+            pk=subscription_id
         )
-        serializer.save(farmer_subscription=subscription)
+        serializer.save(farmerSubscriptionID=subscription)
+
+    def create(self, request, *args, **kwargs):  # explicit for clarity (should be provided by mixin)
+        return super().create(request, *args, **kwargs)
 
 class PaymentViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing payments.
-    """
+    queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_queryset(self):
         user = self.request.user
-        queryset = Payment.objects.all()
-        
-        # Admins can see all payments
+        qs = self.queryset
         if user.is_staff or user.is_superuser:
-            return queryset
-            
-        # Farmers can only see their own payments
+            return qs
         if hasattr(user, 'farmer_profile'):
-            return queryset.filter(
-                farmer_subscription__farmer=user.farmer_profile
-            )
-            
-        return queryset.none()
+            return qs.filter(farmerSubscriptionID__farmerID=user.farmer_profile)
+        return qs.none()
 
 class SubscriptionStatusView(APIView):
     """
@@ -231,7 +262,7 @@ class SubscriptionStatusView(APIView):
         
         try:
             subscription = FarmerSubscription.objects.get(
-                farmer=farmer,
+                farmerID=farmer,
                 status=SubscriptionStatus.ACTIVE,
                 end_date__gte=timezone.now().date()
             )
@@ -252,39 +283,9 @@ class SubscriptionStatusView(APIView):
                     many=True
                 ).data
             })
-            return qs
-        if hasattr(user, 'farmer_profile'):
-            return qs.filter(farmer=user.farmer_profile)
-        return qs.none()
 
     def perform_create(self, serializer):
         farmer = getattr(self.request.user, 'farmer_profile', None)
-        serializer.save(farmer=farmer)
+        serializer.save(farmerID=farmer)
 
-class FarmerSubscriptionResourceViewSet(viewsets.ModelViewSet):
-    queryset = FarmerSubscriptionResource.objects.all()
-    serializer_class = FarmerSubscriptionResourceSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if user.is_staff or getattr(user, 'is_superuser', False) or getattr(user, 'role', '').upper() == 'ADMINISTRATOR':
-            return qs
-        if hasattr(user, 'farmer_profile'):
-            return qs.filter(farmer_subscription__farmer=user.farmer_profile)
-        return qs.none()
-
-class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if user.is_staff or getattr(user, 'is_superuser', False) or getattr(user, 'role', '').upper() == 'ADMINISTRATOR':
-            return qs
-        if hasattr(user, 'farmer_profile'):
-            return qs.filter(farmer_subscription__farmer=user.farmer_profile)
-        return qs.none()
+## Removed duplicate FarmerSubscriptionResourceViewSet and PaymentViewSet definitions (now consolidated above)

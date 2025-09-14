@@ -1,173 +1,164 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from .models import (
-    SubscriptionType, Resource, FarmerSubscription, 
-    FarmerSubscriptionResource, SubscriptionStatus, ResourceType
+    SubscriptionType, Resource, FarmerSubscription,
+    FarmerSubscriptionResource, SubscriptionStatus
 )
 
+
 class SubscriptionService:
-    """Service class for handling subscription-related business logic"""
-    
+    """Service class for handling subscription-related business logic."""
+
     @staticmethod
     def create_subscription(farmer, subscription_type_id, duration_months=1, auto_renew=True):
-        """Create a new subscription for a farmer"""
         try:
-            subscription_type = SubscriptionType.objects.get(id=subscription_type_id)
+            subscription_type = SubscriptionType.objects.get(subscriptionTypeID=subscription_type_id)
         except SubscriptionType.DoesNotExist:
             raise ValidationError("Invalid subscription type")
-        
-        # Deactivate any existing active subscriptions
+
+        # Deactivate existing active subscriptions for farmer
         FarmerSubscription.objects.filter(
-            farmer=farmer,
-            status=SubscriptionStatus.ACTIVE
+            farmerID=farmer, status=SubscriptionStatus.ACTIVE
         ).update(status=SubscriptionStatus.CANCELLED)
-        
+
         start_date = timezone.now().date()
         end_date = start_date + timedelta(days=30 * duration_months)
-        
+
         subscription = FarmerSubscription.objects.create(
-            farmer=farmer,
-            sub_type=subscription_type,
+            farmerID=farmer,
+            subscription_typeID=subscription_type,
             start_date=start_date,
             end_date=end_date,
             auto_renew=auto_renew,
-            status=SubscriptionStatus.PENDING
+            status=SubscriptionStatus.ACTIVE
         )
-        
-        # Add basic resources that come with the subscription
-        basic_resources = Resource.objects.filter(is_basic=True)
-        for resource in basic_resources:
+
+        # Attach basic resources
+        for resource in Resource.objects.filter(is_basic=True):
             FarmerSubscriptionResource.objects.create(
-                farmer_subscription=subscription,
-                resource=resource,
+                farmerSubscriptionID=subscription,
+                resourceID=resource,
                 status=True
             )
-            
         return subscription
-    
+
     @staticmethod
     def add_resource_to_subscription(subscription_id, resource_id):
-        """Add a resource to a subscription if allowed"""
         try:
-            subscription = FarmerSubscription.objects.get(id=subscription_id)
-            resource = Resource.objects.get(id=resource_id)
+            subscription = FarmerSubscription.objects.get(farmerSubscriptionID=subscription_id)
+            resource = Resource.objects.get(resourceID=resource_id)
         except (FarmerSubscription.DoesNotExist, Resource.DoesNotExist):
             raise ValidationError("Invalid subscription or resource")
-            
+
         if not subscription.is_active:
             raise ValidationError("Cannot add resources to an inactive subscription")
-            
         if resource.is_basic:
             raise ValidationError("Basic resources are automatically added to all subscriptions")
-            
+
         with transaction.atomic():
-            # Check if already added
             if FarmerSubscriptionResource.objects.filter(
-                farmer_subscription=subscription,
-                resource=resource
+                farmerSubscriptionID=subscription, resourceID=resource
             ).exists():
                 raise ValidationError("Resource already added to this subscription")
-                
-            # Check subscription limits
+
             if not subscription.can_add_resource(resource):
                 raise ValidationError(
-                    "Cannot add more resources of this type. "
-                    "Please upgrade your subscription or contact support."
+                    "Cannot add more resources of this type. Please upgrade your subscription or contact support."
                 )
-                
-            # Add the resource
+
             FarmerSubscriptionResource.objects.create(
-                farmer_subscription=subscription,
-                resource=resource,
+                farmerSubscriptionID=subscription,
+                resourceID=resource,
                 status=True
             )
-    
+
     @staticmethod
     def check_subscription_status():
-        """Check and update subscription statuses (to be run as a scheduled task)"""
         today = timezone.now().date()
-        
-        # Expire old subscriptions
         FarmerSubscription.objects.filter(
-            end_date__lt=today,
-            status=SubscriptionStatus.ACTIVE
+            end_date__lt=today, status=SubscriptionStatus.ACTIVE
         ).update(status=SubscriptionStatus.EXPIRED)
-        
-        # Suspend subscriptions with pending payments
+
         pending_payment_subs = FarmerSubscription.objects.filter(
             status=SubscriptionStatus.PENDING,
             payments__status='PENDING',
-            payments__due_date__lt=today - timedelta(days=7)  # 7 days grace period
+            payments__due_date__lt=today - timedelta(days=7)
         )
         pending_payment_subs.update(status=SubscriptionStatus.SUSPENDED)
-    
+
     @staticmethod
     def get_available_resources(subscription):
-        """Get all resources available to a subscription"""
-        # Get all basic resources
         basic_resources = Resource.objects.filter(is_basic=True)
-        
-        # Get all resources included in the subscription
         subscribed_resources = Resource.objects.filter(
-            allocations__farmer_subscription=subscription,
+            allocations__farmerSubscriptionID=subscription,
             allocations__status=True
         )
-        
-        # Combine and remove duplicates
         return (basic_resources | subscribed_resources).distinct()
-    
+
     @staticmethod
     def get_subscription_utilization(subscription):
-        """Get detailed resource utilization for a subscription"""
         return subscription.get_utilization()
 
     @staticmethod
     def upgrade_subscription(subscription, new_subscription_type_id):
-        """Upgrade a subscription to a higher tier"""
+        if not subscription:
+            raise ValidationError("Subscription context missing")
+
         try:
-            new_sub_type = SubscriptionType.objects.get(id=new_subscription_type_id)
+            new_sub_type = SubscriptionType.objects.get(subscriptionTypeID=new_subscription_type_id)
         except SubscriptionType.DoesNotExist:
             raise ValidationError("Invalid subscription type")
-            
-        if new_sub_type.tier <= subscription.sub_type.tier:
+
+        tier_order = {'INDIVIDUAL': 0, 'NORMAL': 1, 'PREMIUM': 2}
+        current_tier = subscription.subscription_typeID.tier if subscription.subscription_typeID else 'INDIVIDUAL'
+        if tier_order.get(new_sub_type.tier, -1) <= tier_order.get(current_tier, -1):
             raise ValidationError("New subscription type must be of a higher tier")
-            
-        # Calculate prorated credit for remaining time
-        remaining_days = (subscription.end_date - timezone.now().date()).days
+
+        remaining_days = (subscription.end_date - timezone.now().date()).days if subscription.end_date else 0
         if remaining_days <= 0:
             remaining_days = 1
-            
-        daily_rate = subscription.sub_type.cost / 30  # Simple 30-day month
-        credit = remaining_days * daily_rate
-        
-        # Create new subscription
+        daily_rate = (subscription.subscription_typeID.cost if subscription.subscription_typeID else 0) / 30
+        _credit = remaining_days * daily_rate  # placeholder
+
         new_subscription = FarmerSubscription.objects.create(
-            farmer=subscription.farmer,
-            sub_type=new_sub_type,
+            farmerID=subscription.farmerID,
+            subscription_typeID=new_sub_type,
             start_date=timezone.now().date(),
-            end_date=timezone.now().date() + timedelta(days=30),  # 1 month
+            end_date=timezone.now().date() + timedelta(days=30),
             status=SubscriptionStatus.ACTIVE
         )
-        
-        # Transfer resources that are compatible with the new subscription
-        resources = subscription.resources.filter(status=True).select_related('resource')
-        for sub_resource in resources:
-            if not sub_resource.resource.is_basic:
-                try:
-                    FarmerSubscriptionResource.objects.create(
-                        farmer_subscription=new_subscription,
-                        resource=sub_resource.resource,
-                        status=True
-                    )
-                except:
-                    # Skip if resource can't be added (e.g., not allowed in new tier)
-                    continue
-        
-        # Mark old subscription as upgraded
-        subscription.status = SubscriptionStatus.CANCELLED
-        subscription.notes = f"Upgraded to {new_sub_type.name}"
-        subscription.save()
-        
+
+        for sub_resource in subscription.resources.filter(status=True).select_related('resourceID'):
+            res = sub_resource.resourceID
+            if res.is_basic:
+                continue
+            try:
+                FarmerSubscriptionResource.objects.create(
+                    farmerSubscriptionID=new_subscription,
+                    resourceID=res,
+                    status=True
+                )
+            except Exception:
+                continue
+
+        FarmerSubscription.objects.filter(pk=subscription.pk).update(
+            status=SubscriptionStatus.CANCELLED,
+            notes=f"Upgraded to {new_sub_type.name}"
+        )
+
+    # (Debug removed) cancellation applied above
+        # Debug: verify cancellation persisted
+    # Debug logging removed for production
+
+        changed = False
+        for attr in ('start_date', 'end_date'):
+            val = getattr(new_subscription, attr, None)
+            if isinstance(val, datetime):
+                setattr(new_subscription, attr, val.date())
+                changed = True
+        if changed:
+            new_subscription.save(update_fields=['start_date', 'end_date'])
+
         return new_subscription
