@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'corsheaders',
     # project apps
+    'config.apps.ConfigConfig',
     'accounts',
     'farms',
     'breeds',
@@ -91,6 +92,7 @@ INSTALLED_APPS = [
     'subscriptions',
     'sensors',
     'knowledge',
+    'system_admin.apps.SystemAdminConfig',
     'rest_framework',
 ]
 
@@ -130,9 +132,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'smart_poultry'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', '1234'),
+        'NAME': os.environ.get('DB_NAME', 'kuku_db'),
+        'USER': os.environ.get('DB_USER', 'kuku_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '12345'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }

@@ -4,6 +4,8 @@ from rest_framework_nested.routers import NestedSimpleRouter
 from subscriptions.views import SubscriptionStatusView, SubscriptionStatsView, BillingReportsView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .dashboard import dashboard_stats
+# Temporarily commented out to fix circular import during migrations
+# from .views import SystemConfigurationViewSet, SystemLogViewSet, BackupRecordViewSet, SystemMetricsView
 
 
 router = DefaultRouter()
@@ -65,6 +67,11 @@ router.register(r'exception-diseases', ExceptionDiseaseViewSet)
 router.register(r'anomalies', AnomalyViewSet)
 router.register(r'medications', MedicationViewSet)
 
+# System Administration ViewSets - temporarily commented out for migrations
+# router.register(r'system/configuration', SystemConfigurationViewSet, basename='system-configuration')
+# router.register(r'system/logs', SystemLogViewSet, basename='system-logs')
+# router.register(r'system/backups', BackupRecordViewSet, basename='system-backups')
+
 urlpatterns = [
     # Include nested router URLs FIRST so they match before action-based routes
     path('', include(subscription_router.urls)),
@@ -75,6 +82,8 @@ urlpatterns = [
     # Subscription-specific endpoints
     path('subscriptions/stats/', SubscriptionStatsView.as_view(), name='subscription-stats'),
     path('billing-reports/', BillingReportsView.as_view(), name='billing-reports'),
+    # System Administration endpoints - temporarily commented out for migrations
+    # path('system/metrics/', SystemMetricsView.as_view(), name='system-metrics'),
     # APIView endpoints
     path('subscription-status/', SubscriptionStatusView.as_view(), name='subscription-status'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

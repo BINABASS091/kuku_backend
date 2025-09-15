@@ -17,7 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from .views import APIRootView
+# Temporarily remove this import to fix circular dependency
+# from .views import APIRootView
 
 from rest_framework_simplejwt.views import TokenRefreshView  # type: ignore
 from accounts.auth import RoleTokenObtainPairView
@@ -40,7 +41,8 @@ api_patterns = [
 ]
 
 urlpatterns = [
-    path('', APIRootView.as_view(), name='root'),
+    # Temporarily comment out APIRootView due to circular import
+    # path('', APIRootView.as_view(), name='root'),
     path('admin/', admin.site.urls),
     *api_patterns,
 ]
