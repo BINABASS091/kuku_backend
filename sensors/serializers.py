@@ -30,7 +30,7 @@ class SensorTypeSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = SensorType
-        fields = ['sensorTypeID', 'name', 'unit', 'total_readings', 'active_devices_count', 
+        fields = ['sensorTypeID', 'sensorTypeName', 'measurementUnit', 'total_readings', 'active_devices_count', 
                  'latest_reading_timestamp', 'avg_reading_value']
         read_only_fields = ['sensorTypeID']
     
@@ -53,12 +53,12 @@ class SensorTypeSerializer(serializers.ModelSerializer):
         result = obj.readings.aggregate(avg_value=Avg('value'))
         return round(result['avg_value'], 2) if result['avg_value'] else 0
         
-    def validate_name(self, value):
+    def validate_sensorTypeName(self, value):
         if not value or not value.strip():
             raise ValidationError(_("Sensor type name cannot be empty."))
         return value.strip()
         
-    def validate_unit(self, value):
+    def validate_measurementUnit(self, value):
         if not value or not value.strip():
             raise ValidationError(_("Unit cannot be empty."))
         return value.strip()

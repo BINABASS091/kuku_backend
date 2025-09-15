@@ -6,7 +6,7 @@ from .serializers import FarmSerializer, DeviceSerializer
 
 
 class FarmViewSet(viewsets.ModelViewSet):
-	queryset = Farm.objects.select_related('farmer').prefetch_related('farm_devices').all()
+	queryset = Farm.objects.select_related('farmerID').prefetch_related('farm_devices').all()
 	serializer_class = FarmSerializer
 	permission_classes = [permissions.IsAuthenticated]
 
@@ -21,7 +21,7 @@ class FarmViewSet(viewsets.ModelViewSet):
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
-	queryset = Device.objects.select_related('farm').all()
+	queryset = Device.objects.select_related('farmID').all()
 	serializer_class = DeviceSerializer
 	permission_classes = [permissions.IsAuthenticated]
 

@@ -35,6 +35,9 @@ class BreedSerializer(serializers.ModelSerializer):
         model = Breed
         fields = ['breedID', 'breedName', 'breed_typeID', 'type_detail', 'preedphoto', 
                  'activities_count', 'conditions_count', 'feeding_schedules_count', 'growth_records_count']
+        extra_kwargs = {
+            'preedphoto': {'required': False, 'allow_blank': True, 'allow_null': True}
+        }
     
     def get_activities_count(self, obj):
         """Get number of activities for this breed"""
@@ -79,7 +82,7 @@ class ConditionTypeSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ConditionType
-        fields = ['condition_typeID', 'name', 'breed_conditions_count', 'active_conditions_count']
+        fields = ['condition_typeID', 'conditionName', 'condition_unit', 'breed_conditions_count', 'active_conditions_count']
     
     def get_breed_conditions_count(self, obj):
         """Get total breed conditions using this condition type"""
@@ -116,7 +119,7 @@ class FoodTypeSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = FoodType
-        fields = ['foodTypeID', 'name', 'feeding_schedules_count', 'breeds_using_count']
+        fields = ['foodTypeID', 'foodName', 'feeding_schedules_count', 'breeds_using_count']
     
     def get_feeding_schedules_count(self, obj):
         """Get total feeding schedules using this food type"""

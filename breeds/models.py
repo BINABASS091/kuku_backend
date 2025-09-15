@@ -24,7 +24,7 @@ class Breed(models.Model):
 	breedID = models.AutoField(primary_key=True)
 	breedName = models.CharField(max_length=50, unique=True)
 	breed_typeID = models.ForeignKey('breeds.BreedType', on_delete=models.CASCADE, related_name='breeds', db_column='breed_typeID')
-	preedphoto = models.CharField(max_length=50, default='preedphoto.png')
+	preedphoto = models.CharField(max_length=255, default='preedphoto.png', blank=True, null=True)
 
 	class Meta:
 		verbose_name = 'Breed'
@@ -65,6 +65,7 @@ class BreedActivity(models.Model):
 		verbose_name = 'Breed Activity'
 		verbose_name_plural = 'Breed Activities'
 		unique_together = ('breedID', 'activityTypeID', 'age')
+		ordering = ['breedID', 'age']
 		db_table = 'breed_activity_tb'
 
 	def __str__(self):
@@ -111,6 +112,7 @@ class BreedCondition(models.Model):
 		verbose_name = 'Breed Condition'
 		verbose_name_plural = 'Breed Conditions'
 		unique_together = ('breedID', 'condition_typeID')
+		ordering = ['breedID', 'condition_typeID']
 		db_table = 'breed_condition_tb'
 		constraints = [
 			models.CheckConstraint(
@@ -159,6 +161,7 @@ class BreedFeeding(models.Model):
 		verbose_name = 'Breed Feeding'
 		verbose_name_plural = 'Breed Feedings'
 		unique_together = ('breedID', 'foodTypeID', 'age')
+		ordering = ['breedID', 'age', 'foodTypeID']
 		db_table = 'breed_feeding_tb'
 
 	def __str__(self):
@@ -175,6 +178,7 @@ class BreedGrowth(models.Model):
 		verbose_name = 'Breed Growth'
 		verbose_name_plural = 'Breed Growths'
 		unique_together = ('breedID', 'age')
+		ordering = ['breedID', 'age']
 		db_table = 'breed_growth_tb'
 		indexes = [
 			models.Index(fields=['breedID', 'age'], name='breed_growth_age_idx')

@@ -35,6 +35,7 @@ class Reading(models.Model):
 	class Meta:
 		verbose_name = 'Reading'
 		verbose_name_plural = 'Readings'
+		ordering = ['-timestamp', 'readingID']
 		db_table = 'reading_tb'
 		indexes = [
 			models.Index(fields=['deviceID', 'timestamp']),

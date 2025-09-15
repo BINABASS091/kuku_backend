@@ -22,6 +22,7 @@ class Batch(models.Model):
 	class Meta:
 		verbose_name = 'Batch'
 		verbose_name_plural = 'Batches'
+		ordering = ['-arriveDate', 'batchID']
 		db_table = 'batch_tb'
 
 	def __str__(self):
