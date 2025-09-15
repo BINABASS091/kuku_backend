@@ -288,4 +288,140 @@ class SubscriptionStatusView(APIView):
         farmer = getattr(self.request.user, 'farmer_profile', None)
         serializer.save(farmerID=farmer)
 
+
+class SubscriptionStatsView(APIView):
+    """
+    API endpoint to get subscription statistics.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Calculate subscription statistics
+        from django.db.models import Count, Sum, Avg, DecimalField
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+        
+        stats = {
+            'total_subscriptions': FarmerSubscription.objects.count(),
+            'active_subscriptions': FarmerSubscription.objects.filter(
+                status=SubscriptionStatus.ACTIVE
+            ).count(),
+            'pending_subscriptions': FarmerSubscription.objects.filter(
+                status=SubscriptionStatus.PENDING
+            ).count(),
+            'cancelled_subscriptions': FarmerSubscription.objects.filter(
+                status=SubscriptionStatus.CANCELLED
+            ).count(),
+            'total_revenue': float(Payment.objects.filter(
+                status='COMPLETED'
+            ).aggregate(
+                total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+            )['total']),
+            'subscription_type_breakdown': list(
+                SubscriptionType.objects.annotate(
+                    subscription_count=Count('farmer_subscriptions')
+                ).values('name', 'tier', 'subscription_count')
+            ),
+            'monthly_revenue': float(Payment.objects.filter(
+                status='COMPLETED',
+                payment_date__year=timezone.now().year,
+                payment_date__month=timezone.now().month
+            ).aggregate(
+                total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+            )['total'])
+        }
+        
+        return Response(stats)
+
+
+class BillingReportsView(APIView):
+    """
+    API endpoint to get billing reports.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        period = request.query_params.get('period', 'current_month')
+        
+        from django.db.models import Count, Sum, Avg, DecimalField
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+        from datetime import datetime, timedelta
+        
+        # Calculate date range based on period
+        now = timezone.now()
+        if period == 'current_month':
+            start_date = now.replace(day=1).date()
+            end_date = now.date()
+        elif period == 'last_month':
+            first_day_this_month = now.replace(day=1)
+            last_month = first_day_this_month - timedelta(days=1)
+            start_date = last_month.replace(day=1).date()
+            end_date = last_month.date()
+        elif period == 'current_year':
+            start_date = now.replace(month=1, day=1).date()
+            end_date = now.date()
+        else:
+            start_date = now.replace(day=1).date()
+            end_date = now.date()
+        
+        # Calculate billing report data
+        payments_in_period = Payment.objects.filter(
+            payment_date__gte=start_date,
+            payment_date__lte=end_date,
+            status='COMPLETED'
+        )
+        
+        total_revenue = payments_in_period.aggregate(
+            total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+        )['total']
+        
+        subscription_revenue = payments_in_period.filter(
+            farmerSubscriptionID__isnull=False
+        ).aggregate(
+            total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+        )['total']
+        
+        active_subscriptions = FarmerSubscription.objects.filter(
+            status=SubscriptionStatus.ACTIVE,
+            start_date__lte=end_date
+        ).count()
+        
+        new_subscriptions = FarmerSubscription.objects.filter(
+            start_date__gte=start_date,
+            start_date__lte=end_date
+        ).count()
+        
+        cancelled_subscriptions = FarmerSubscription.objects.filter(
+            status=SubscriptionStatus.CANCELLED,
+            end_date__gte=start_date,
+            end_date__lte=end_date
+        ).count()
+        
+        avg_subscription_value = FarmerSubscription.objects.filter(
+            start_date__gte=start_date,
+            start_date__lte=end_date
+        ).aggregate(
+            avg_value=Coalesce(Avg('subscription_typeID__cost'), Decimal('0'), output_field=DecimalField())
+        )['avg_value']
+        
+        report = {
+            'period': period,
+            'period_label': f"{start_date.strftime('%B %Y')}" if period == 'current_month' else period.replace('_', ' ').title(),
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+            'total_revenue': float(total_revenue),
+            'subscription_revenue': float(subscription_revenue),
+            'payment_revenue': float(total_revenue - subscription_revenue),
+            'active_subscriptions': active_subscriptions,
+            'new_subscriptions': new_subscriptions,
+            'cancelled_subscriptions': cancelled_subscriptions,
+            'average_subscription_value': float(avg_subscription_value or 0),
+            'revenue_growth': 0.0,  # Can be calculated by comparing with previous period
+            'subscription_growth': 0.0,  # Can be calculated by comparing with previous period
+        }
+        
+        return Response(report)
+
+
 ## Removed duplicate FarmerSubscriptionResourceViewSet and PaymentViewSet definitions (now consolidated above)

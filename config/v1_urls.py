@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter, SimpleRouter
 from rest_framework_nested.routers import NestedSimpleRouter
-from subscriptions.views import SubscriptionStatusView
+from subscriptions.views import SubscriptionStatusView, SubscriptionStatsView, BillingReportsView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .dashboard import dashboard_stats
 
@@ -72,6 +72,9 @@ urlpatterns = [
     path('', include('knowledge.urls')),
     # Dashboard endpoints
     path('dashboard/stats/', dashboard_stats, name='dashboard-stats'),
+    # Subscription-specific endpoints
+    path('subscriptions/stats/', SubscriptionStatsView.as_view(), name='subscription-stats'),
+    path('billing-reports/', BillingReportsView.as_view(), name='billing-reports'),
     # APIView endpoints
     path('subscription-status/', SubscriptionStatusView.as_view(), name='subscription-status'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
