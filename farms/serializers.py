@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Farm, Device
 from accounts.serializers import FarmerSerializer
+from accounts.models import Farmer
 
 
 class DeviceListSerializer(serializers.ModelSerializer):
@@ -10,7 +11,7 @@ class DeviceListSerializer(serializers.ModelSerializer):
 
 
 class FarmSerializer(serializers.ModelSerializer):
-    farmerID = serializers.PrimaryKeyRelatedField(queryset=Farm._meta.get_field('farmerID').remote_field.model.objects.all(), source='farmerID')
+    farmerID = serializers.PrimaryKeyRelatedField(queryset=Farmer.objects.all())
     farmer_details = serializers.SerializerMethodField()
     devices = DeviceListSerializer(many=True, read_only=True, source='farm_devices')
     total_devices = serializers.SerializerMethodField()
@@ -102,7 +103,7 @@ class FarmSerializer(serializers.ModelSerializer):
 
 
 class DeviceSerializer(serializers.ModelSerializer):
-    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all(), source='farmID')
+    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
     farm_details = serializers.SerializerMethodField()
     last_reading = serializers.SerializerMethodField()
     readings_count = serializers.SerializerMethodField()
