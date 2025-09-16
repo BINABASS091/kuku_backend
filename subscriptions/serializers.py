@@ -97,14 +97,18 @@ class FarmerSubscriptionListSerializer(serializers.ModelSerializer):
     farmer = AccountsFarmerSerializer(source='farmerID', read_only=True)
     subscription_type = SubscriptionTypeSerializer(source='subscription_typeID', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    utilization = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerSubscription
         fields = [
             'id', 'farmerSubscriptionID', 'farmer', 'subscription_type', 'start_date', 'end_date',
-            'status', 'status_display', 'auto_renew', 'created_at'
+            'status', 'status_display', 'auto_renew', 'utilization', 'created_at'
         ]
         read_only_fields = fields
+
+    def get_utilization(self, obj):
+        return get_subscription_utilization(obj)
 
 
 class FarmerSubscriptionDetailSerializer(serializers.ModelSerializer):
