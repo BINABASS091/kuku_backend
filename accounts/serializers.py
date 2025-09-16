@@ -62,7 +62,7 @@ class FarmerSerializer(serializers.ModelSerializer):
             'total_farms', 'total_batches', 'created_date'
         ]
         read_only_fields = ['farmerID', 'created_date']
-    
+
     def get_city(self, obj):
         # Extract city from address or return None
         return None
@@ -161,6 +161,17 @@ class FarmerSerializer(serializers.ModelSerializer):
             return total
         except:
             return 0
+
+class FarmerCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Farmer
+        fields = ['user', 'farmerName', 'address', 'email', 'phone']
+        
+    def validate_user(self, value):
+        """Ensure the user doesn't already have a farmer profile"""
+        if hasattr(value, 'farmer_profile'):
+            raise serializers.ValidationError("User already has a farmer profile")
+        return value
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(

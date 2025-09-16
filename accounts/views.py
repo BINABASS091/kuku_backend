@@ -3,7 +3,7 @@ from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from accounts.models import User, Farmer
-from accounts.serializers import UserSerializer, FarmerSerializer, UserCreateSerializer
+from accounts.serializers import UserSerializer, FarmerSerializer, UserCreateSerializer, FarmerCreateSerializer
 from config.permissions import IsAdminOrReadOnly
 
 # Create your views here.
@@ -42,12 +42,26 @@ class FarmerViewSet(viewsets.ModelViewSet):
     serializer_class = FarmerSerializer
     permission_classes = [permissions.IsAuthenticated]
     
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return FarmerCreateSerializer
+        return FarmerSerializer
+    
     def perform_create(self, serializer):
-        """Set the user to the currently authenticated user when creating a new farmer."""
-        if not hasattr(self.request.user, 'farmer_profile'):
-            serializer.save(user=self.request.user)
+        """Set the user when creating a new farmer."""
+        # If user is specified in the data (for admin creation), use that
+        if 'user' in serializer.validated_data:
+            target_user = serializer.validated_data['user']
+            if not hasattr(target_user, 'farmer_profile'):
+                serializer.save()
+            else:
+                raise serializers.ValidationError({"error": "User already has a farmer profile"})
         else:
-            raise serializers.ValidationError({"error": "User already has a farmer profile"})
+            # If no user specified, use the current authenticated user (self-registration)
+            if not hasattr(self.request.user, 'farmer_profile'):
+                serializer.save(user=self.request.user)
+            else:
+                raise serializers.ValidationError({"error": "User already has a farmer profile"})
     
     @action(detail=False, methods=['get'])
     def my_farm(self, request):
