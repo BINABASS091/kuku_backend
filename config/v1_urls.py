@@ -16,7 +16,7 @@ from farms.views import FarmViewSet, DeviceViewSet
 from breeds.views import (
     BreedTypeViewSet, BreedViewSet, ActivityTypeViewSet, BreedActivityViewSet,
     ConditionTypeViewSet, BreedConditionViewSet, FoodTypeViewSet, 
-    BreedFeedingViewSet, BreedGrowthViewSet
+    BreedFeedingViewSet, BreedGrowthViewSet, BreedConfigurationViewSet, FarmBreedPlanViewSet
 )
 from batches.views import BatchViewSet, ActivityScheduleViewSet, BatchActivityViewSet, BatchFeedingViewSet
 from subscriptions.views import (
@@ -36,6 +36,8 @@ router.register(r'farms', FarmViewSet)
 router.register(r'devices', DeviceViewSet)
 router.register(r'breed-types', BreedTypeViewSet)
 router.register(r'breeds', BreedViewSet)
+router.register(r'breed-configurations', BreedConfigurationViewSet)
+router.register(r'farm-breed-plans', FarmBreedPlanViewSet)
 router.register(r'activity-types', ActivityTypeViewSet)
 router.register(r'breed-activities', BreedActivityViewSet)
 router.register(r'condition-types', ConditionTypeViewSet)

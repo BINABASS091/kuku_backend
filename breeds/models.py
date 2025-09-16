@@ -203,4 +203,7 @@ class FeedingType(models.Model):
 	def __str__(self):
 		return self.feedingName
 
+# Import lifecycle models to make them available
+from .lifecycle_models import *
+
 # Create your models here.

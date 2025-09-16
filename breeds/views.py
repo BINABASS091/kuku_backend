@@ -12,6 +12,8 @@ from breeds.serializers import (
     ConditionTypeSerializer, BreedConditionSerializer, FoodTypeSerializer, 
     BreedFeedingSerializer, BreedGrowthSerializer
 )
+# Import lifecycle views
+from breeds.lifecycle_views import BreedConfigurationViewSet, FarmBreedPlanViewSet
 import logging
 
 logger = logging.getLogger(__name__)
