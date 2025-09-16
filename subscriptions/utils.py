@@ -7,7 +7,7 @@ def get_subscription_utilization(subscription):
     Get the resource utilization for a subscription
     Returns a dictionary with hardware and software utilization
     """
-    resources = subscription.resources.filter(status=True).select_related('resourceID')
+    resources = subscription.subscription_resources.filter(status=True).select_related('resourceID')
     
     hardware_count = resources.filter(resourceID__resource_type='HARDWARE').count()
     software_count = resources.filter(resourceID__resource_type__in=['SOFTWARE', 'PREDICTION', 'ANALYTICS']).count()
@@ -84,7 +84,7 @@ def get_available_resources(subscription):
 
 def get_subscription_resources_breakdown(subscription):
     """Get a detailed breakdown of resources in a subscription"""
-    resources = subscription.resources.filter(status=True).select_related('resourceID')
+    resources = subscription.subscription_resources.filter(status=True).select_related('resourceID')
     
     breakdown = {
         'hardware': [],

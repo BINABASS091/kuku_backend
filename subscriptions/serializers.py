@@ -4,6 +4,7 @@ from .models import (
     FarmerSubscriptionResource, Payment, ResourceType
 )
 from accounts.serializers import FarmerSerializer as AccountsFarmerSerializer
+from accounts.models import Farmer
 from .exceptions import (
     SubscriptionLimitExceeded, SubscriptionInactiveError
 )
@@ -81,14 +82,6 @@ class ResourceSerializer(serializers.ModelSerializer):
         ).count()
     
     def get_total_allocations(self, obj):
-        print(f"Object: {obj}")
-        print(f"Subscription resources: {obj.subscription_resources.all()}")
-
-        # Check what fields are available on subscription_resources
-        if obj.subscription_resources.exists():
-            first_resource = obj.subscription_resources.first()
-            print(f"First resource fields: {[f.name for f in first_resource._meta.get_fields()]}")
-
         """Get total quantity allocated across all subscriptions"""
         from django.db.models import Sum
         result = obj.allocations.aggregate(total=Sum('quantity'))
@@ -101,13 +94,14 @@ class ResourceSerializer(serializers.ModelSerializer):
 
 class FarmerSubscriptionListSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='farmerSubscriptionID', read_only=True)
+    farmer = AccountsFarmerSerializer(source='farmerID', read_only=True)
     subscription_type = SubscriptionTypeSerializer(source='subscription_typeID', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
     class Meta:
         model = FarmerSubscription
         fields = [
-            'id', 'farmerSubscriptionID', 'subscription_type', 'start_date', 'end_date',
+            'id', 'farmerSubscriptionID', 'farmer', 'subscription_type', 'start_date', 'end_date',
             'status', 'status_display', 'auto_renew', 'created_at'
         ]
         read_only_fields = fields
@@ -184,22 +178,41 @@ class FarmerSubscriptionCreateSerializer(serializers.ModelSerializer):
         source='subscription_typeID',
         write_only=True
     )
+    farmer_id = serializers.PrimaryKeyRelatedField(
+        queryset=Farmer.objects.all(),
+        source='farmerID',
+        write_only=True,
+        required=False
+    )
     duration_months = serializers.IntegerField(min_value=1, max_value=12, default=1, write_only=True)
 
     class Meta:
         model = FarmerSubscription
-        fields = ['subscription_type_id', 'duration_months', 'auto_renew']
+        fields = ['farmer_id', 'subscription_type_id', 'duration_months', 'auto_renew']
 
     def create(self, validated_data):
         request = self.context.get('request')
-        if not request or not hasattr(request.user, 'farmer_profile'):
-            raise serializers.ValidationError('User is not a farmer')
+        if not request:
+            raise serializers.ValidationError('Request context is required')
 
         subscription_type = validated_data.pop('subscription_typeID')
         duration_months = validated_data.pop('duration_months', 1)
+        farmer = validated_data.pop('farmerID', None)
+
+        # If no farmer specified and user is a farmer, use current user's farmer profile
+        if not farmer:
+            if hasattr(request.user, 'farmer_profile'):
+                farmer = request.user.farmer_profile
+            else:
+                raise serializers.ValidationError('User is not a farmer and no farmer specified')
+
+        # For admin users, allow specifying farmer_id
+        if farmer != getattr(request.user, 'farmer_profile', None):
+            if not (request.user.is_staff or request.user.is_superuser):
+                raise serializers.ValidationError('Only admins can create subscriptions for other farmers')
 
         subscription = SubscriptionService.create_subscription(
-            farmer=request.user.farmer_profile,
+            farmer=farmer,
             subscription_type_id=subscription_type.subscriptionTypeID,
             duration_months=duration_months,
             auto_renew=validated_data.get('auto_renew', True)

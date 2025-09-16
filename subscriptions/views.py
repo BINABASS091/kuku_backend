@@ -20,18 +20,18 @@ from config.permissions import IsAdminOrReadOnly, IsFarmerOrAdmin, IsSubscriptio
 from .services import SubscriptionService
 from .utils import get_available_resources, get_subscription_utilization
 
-class SubscriptionTypeViewSet(viewsets.ReadOnlyModelViewSet):
-    """API endpoint for viewing subscription types."""
+class SubscriptionTypeViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing subscription types (admin) and viewing (users)."""
     queryset = SubscriptionType.objects.all().order_by('tier')
     serializer_class = SubscriptionTypeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
-class ResourceViewSet(viewsets.ReadOnlyModelViewSet):
-    """API endpoint for viewing resources."""
+class ResourceViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing resources (admin) and viewing resources (users)."""
     queryset = Resource.objects.filter(status=True).order_by('resource_type', 'name')
     serializer_class = ResourceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     filterset_fields = ['resource_type', 'category', 'is_basic']
     search_fields = ['name', 'description']
 
@@ -81,17 +81,17 @@ class FarmerSubscriptionViewSet(
     
     def get_queryset(self):
         user = self.request.user
-        queryset = FarmerSubscription.objects.all()
+        queryset = FarmerSubscription.objects.select_related(
+            'farmerID__user', 'subscription_typeID'
+        ).prefetch_related('subscription_resources__resourceID')
 
         # Admins can see all subscriptions
         if user.is_staff or user.is_superuser:
-            return queryset.prefetch_related('resources__resourceID')
+            return queryset
 
         # Farmers can only see their own subscriptions
         if hasattr(user, 'farmer_profile'):
-            return queryset.filter(
-                farmerID=user.farmer_profile
-            ).prefetch_related('resources__resourceID')
+            return queryset.filter(farmerID=user.farmer_profile)
 
         return queryset.none()
         
@@ -301,6 +301,31 @@ class SubscriptionStatsView(APIView):
         from django.db.models.functions import Coalesce
         from decimal import Decimal
         
+        # Calculate actual revenue from completed payments
+        total_revenue_from_payments = float(Payment.objects.filter(
+            status='COMPLETED'
+        ).aggregate(
+            total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+        )['total'])
+        
+        # Calculate potential revenue from active subscriptions
+        active_subscriptions_value = float(
+            FarmerSubscription.objects.filter(
+                status=SubscriptionStatus.ACTIVE
+            ).aggregate(
+                total=Coalesce(Sum('subscription_typeID__cost'), Decimal('0'), output_field=DecimalField())
+            )['total'] or 0
+        )
+        
+        # Monthly revenue from completed payments
+        monthly_revenue_from_payments = float(Payment.objects.filter(
+            status='COMPLETED',
+            payment_date__year=timezone.now().year,
+            payment_date__month=timezone.now().month
+        ).aggregate(
+            total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
+        )['total'])
+
         stats = {
             'total_subscriptions': FarmerSubscription.objects.count(),
             'active_subscriptions': FarmerSubscription.objects.filter(
@@ -312,23 +337,14 @@ class SubscriptionStatsView(APIView):
             'cancelled_subscriptions': FarmerSubscription.objects.filter(
                 status=SubscriptionStatus.CANCELLED
             ).count(),
-            'total_revenue': float(Payment.objects.filter(
-                status='COMPLETED'
-            ).aggregate(
-                total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
-            )['total']),
+            'total_revenue': total_revenue_from_payments,
+            'potential_revenue': active_subscriptions_value,
             'subscription_type_breakdown': list(
                 SubscriptionType.objects.annotate(
                     subscription_count=Count('farmer_subscriptions')
                 ).values('name', 'tier', 'subscription_count')
             ),
-            'monthly_revenue': float(Payment.objects.filter(
-                status='COMPLETED',
-                payment_date__year=timezone.now().year,
-                payment_date__month=timezone.now().month
-            ).aggregate(
-                total=Coalesce(Sum('amount'), Decimal('0'), output_field=DecimalField())
-            )['total'])
+            'monthly_revenue': monthly_revenue_from_payments
         }
         
         return Response(stats)

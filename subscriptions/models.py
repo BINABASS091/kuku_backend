@@ -157,7 +157,7 @@ class FarmerSubscription(models.Model):
     def get_utilization(self):
         """Get resource utilization for this subscription"""
         # type: ignore[attr-defined] for reverse relation during static analysis
-        resources_qs = self.resources.filter(status=True).select_related('resourceID')  # type: ignore[attr-defined]
+        resources_qs = self.subscription_resources.filter(status=True).select_related('resourceID')  # type: ignore[attr-defined]
         hardware_count = resources_qs.filter(resourceID__resource_type=ResourceType.HARDWARE).count()
         software_count = resources_qs.filter(
             Q(resourceID__resource_type=ResourceType.SOFTWARE) |
