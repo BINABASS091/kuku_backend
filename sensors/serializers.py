@@ -66,8 +66,8 @@ class SensorTypeSerializer(serializers.ModelSerializer):
 
 class ReadingSerializer(serializers.ModelSerializer):
     """Reading serializer exposing legacy FK field names (deviceID, sensor_typeID)."""
-    deviceID = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), source='deviceID')
-    sensor_typeID = serializers.PrimaryKeyRelatedField(queryset=SensorType.objects.all(), source='sensor_typeID')
+    deviceID = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+    sensor_typeID = serializers.PrimaryKeyRelatedField(queryset=SensorType.objects.all())
     device_detail = DeviceSerializer(source='deviceID', read_only=True)
     sensor_type_detail = SensorTypeSerializer(source='sensor_typeID', read_only=True)
 

@@ -8,7 +8,7 @@ from breeds.serializers import BreedSerializer as LegacyBreedSerializer
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farm
-        fields = ['farmID', 'name', 'location']
+        fields = ['farmID', 'farmName', 'location']
 
 
 class BreedSerializer(serializers.ModelSerializer):
@@ -18,8 +18,8 @@ class BreedSerializer(serializers.ModelSerializer):
 
 
 class BreedActivitySerializer(serializers.ModelSerializer):
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
-    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all(), source='activityTypeID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
+    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all())
 
     class Meta:
         model = BreedActivity
@@ -28,21 +28,23 @@ class BreedActivitySerializer(serializers.ModelSerializer):
 
 
 class BatchSerializer(serializers.ModelSerializer):
-    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all(), source='farmID')
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
+    farm_details = FarmSerializer(source='farmID', read_only=True)
+    breed_details = BreedSerializer(source='breedID', read_only=True)
     # Use actual DB column names (arriveDate, initAge, harvestAge, initWeight)
 
     class Meta:
         model = Batch
         fields = [
             'batchID', 'farmID', 'breedID', 'arriveDate', 'initAge', 'harvestAge',
-            'quanitity', 'initWeight', 'batch_status'
+            'quanitity', 'initWeight', 'batch_status', 'farm_details', 'breed_details'
         ]
         read_only_fields = ['batchID']
 
 
 class ActivityScheduleSerializer(serializers.ModelSerializer):
-    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
 
     class Meta:
         model = ActivitySchedule
@@ -54,8 +56,8 @@ class ActivityScheduleSerializer(serializers.ModelSerializer):
 
 
 class BatchActivitySerializer(serializers.ModelSerializer):
-    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
-    breedActivityID = serializers.PrimaryKeyRelatedField(queryset=BreedActivity.objects.all(), source='breedActivityID')
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    breedActivityID = serializers.PrimaryKeyRelatedField(queryset=BreedActivity.objects.all())
 
     class Meta:
         model = BatchActivity
@@ -67,7 +69,7 @@ class BatchActivitySerializer(serializers.ModelSerializer):
 
 
 class BatchFeedingSerializer(serializers.ModelSerializer):
-    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), source='batchID')
+    batchID = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
 
     class Meta:
         model = BatchFeeding

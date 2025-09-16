@@ -67,8 +67,8 @@ class ActivityTypeSerializer(serializers.ModelSerializer):
         return obj.breed_activity_types.count()
 
 class BreedActivitySerializer(serializers.ModelSerializer):
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
-    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all(), source='activityTypeID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
+    activityTypeID = serializers.PrimaryKeyRelatedField(queryset=ActivityType.objects.all())
     breed_detail = BreedSerializer(source='breedID', read_only=True)
     activity_type_detail = ActivityTypeSerializer(source='activityTypeID', read_only=True)
 
@@ -93,8 +93,8 @@ class ConditionTypeSerializer(serializers.ModelSerializer):
         return obj.breed_condition_types.filter(condition_status=1).count()
 
 class BreedConditionSerializer(serializers.ModelSerializer):
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
-    condition_typeID = serializers.PrimaryKeyRelatedField(queryset=ConditionType.objects.all(), source='condition_typeID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
+    condition_typeID = serializers.PrimaryKeyRelatedField(queryset=ConditionType.objects.all())
     breed_detail = BreedSerializer(source='breedID', read_only=True)
     condition_type_detail = ConditionTypeSerializer(source='condition_typeID', read_only=True)
     condition_range = serializers.SerializerMethodField()
@@ -130,8 +130,8 @@ class FoodTypeSerializer(serializers.ModelSerializer):
         return obj.breed_feeding_types.values('breedID').distinct().count()
 
 class BreedFeedingSerializer(serializers.ModelSerializer):
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
-    foodTypeID = serializers.PrimaryKeyRelatedField(queryset=FoodType.objects.all(), source='foodTypeID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
+    foodTypeID = serializers.PrimaryKeyRelatedField(queryset=FoodType.objects.all())
     breed_detail = BreedSerializer(source='breedID', read_only=True)
     food_type_detail = FoodTypeSerializer(source='foodTypeID', read_only=True)
 
@@ -140,7 +140,7 @@ class BreedFeedingSerializer(serializers.ModelSerializer):
         fields = ['breedFeedingID', 'breedID', 'breed_detail', 'foodTypeID', 'food_type_detail', 'age', 'quantity', 'frequency', 'breed_feed_status']
 
 class BreedGrowthSerializer(serializers.ModelSerializer):
-    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all(), source='breedID')
+    breedID = serializers.PrimaryKeyRelatedField(queryset=Breed.objects.all())
     breed_detail = BreedSerializer(source='breedID', read_only=True)
 
     class Meta:
