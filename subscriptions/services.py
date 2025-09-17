@@ -101,6 +101,7 @@ class SubscriptionService:
     def get_subscription_utilization(subscription):
         return subscription.get_utilization()
 
+
     @staticmethod
     def upgrade_subscription(subscription, new_subscription_type_id):
         if not subscription:
@@ -130,7 +131,7 @@ class SubscriptionService:
             status=SubscriptionStatus.ACTIVE
         )
 
-        for sub_resource in subscription.resources.filter(status=True).select_related('resourceID'):
+        for sub_resource in subscription.subscription_resources.filter(status=True).select_related('resourceID'):
             res = sub_resource.resourceID
             if res.is_basic:
                 continue
@@ -147,10 +148,6 @@ class SubscriptionService:
             status=SubscriptionStatus.CANCELLED,
             notes=f"Upgraded to {new_sub_type.name}"
         )
-
-    # (Debug removed) cancellation applied above
-        # Debug: verify cancellation persisted
-    # Debug logging removed for production
 
         changed = False
         for attr in ('start_date', 'end_date'):

@@ -19,7 +19,7 @@ class LegacySubscriptionAPITest(TestCase):
 
     def test_create_subscription_and_upgrade(self):
         user = User.objects.create_user(username='farmer1', password='pass12345')
-        farmer = Farmer.objects.create(user=user, full_name='Farmer One', address='Addr', email='f1@example.com', phone='123')
+        farmer = Farmer.objects.create(user=user, farmerName='Farmer One', address='Addr', email='f1@example.com', phone='123')
         st_basic = SubscriptionType.objects.create(name='Basic', tier='INDIVIDUAL', farm_size='Small')
         st_premium = SubscriptionType.objects.create(name='Premium', tier='PREMIUM', farm_size='Large')
         Resource.objects.create(name='Basic HW', resource_type='HARDWARE', category='INVENTORY', is_basic=True)
@@ -54,7 +54,7 @@ class LegacySubscriptionAPITest(TestCase):
     def test_resource_limit_enforced(self):
         # Arrange
         user = User.objects.create_user(username='farmer2', password='pass12345')
-        farmer = Farmer.objects.create(user=user, full_name='Farmer Two', address='Addr', email='f2@example.com', phone='456')
+        farmer = Farmer.objects.create(user=user, farmerName='Farmer Two', address='Addr', email='f2@example.com', phone='456')
         st = SubscriptionType.objects.create(
             name='HWOnly', tier='INDIVIDUAL', farm_size='Small',
             max_hardware_nodes=1, max_software_services=0

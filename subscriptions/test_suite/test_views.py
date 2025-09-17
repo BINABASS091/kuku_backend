@@ -17,7 +17,7 @@ class SubscriptionViewSetTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='pass12345')
         self.farmer = Farmer.objects.create(
-            user=self.user, full_name='Test User', address='Addr', email='t@example.com', phone='+111'
+            user=self.user, farmerName='Test User', address='Addr', email='t@example.com', phone='+111'
         )
         self.basic = SubscriptionType.objects.create(
             name='Basic', tier='INDIVIDUAL', farm_size='Small', max_hardware_nodes=1, max_software_services=2
@@ -70,7 +70,7 @@ class ResourceViewSetTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='ruser', password='pass12345')
         self.farmer = Farmer.objects.create(
-            user=self.user, full_name='Res User', address='Addr', email='r@example.com', phone='+222'
+            user=self.user, farmerName='Res User', address='Addr', email='r@example.com', phone='+222'
         )
         self.hw = Resource.objects.create(name='RHW', resource_type='HARDWARE', category='INVENTORY', is_basic=True)
         self.sw = Resource.objects.create(name='RSW', resource_type='SOFTWARE', category='INVENTORY', is_basic=False)

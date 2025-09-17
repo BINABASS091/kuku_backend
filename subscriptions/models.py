@@ -230,6 +230,7 @@ class FarmerSubscriptionResource(models.Model):
         verbose_name = 'Subscription Resource'
         verbose_name_plural = 'Subscription Resources'
         db_table = 'farmer_subscription_resource_tb'
+        ordering = ['farmerSubscriptionID', 'resourceID']
         indexes = [
             models.Index(fields=['farmerSubscriptionID', 'resourceID']),
             models.Index(fields=['status'], name='sub_res_status_idx')
