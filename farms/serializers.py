@@ -111,6 +111,21 @@ class FarmSerializer(serializers.ModelSerializer):
             self.context['validation_error'] = e.detail
             raise e
 
+    def create(self, validated_data):
+        """Create farm and automatically add the creator as OWNER"""
+        request = self.context.get('request')
+        farm = super().create(validated_data)
+        
+        # Automatically create FarmMembership for the creator as OWNER
+        if request and hasattr(request.user, 'farmer_profile'):
+            FarmMembership.objects.create(
+                farmer=request.user.farmer_profile,
+                farm=farm,
+                role='OWNER'
+            )
+        
+        return farm
+
 
 class DeviceSerializer(serializers.ModelSerializer):
     farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
