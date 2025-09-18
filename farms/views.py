@@ -5,10 +5,27 @@ from .models import Farm, Device
 from .serializers import FarmSerializer, DeviceSerializer
 
 
+
+from .models import FarmMembership
+
 class FarmViewSet(viewsets.ModelViewSet):
-	queryset = Farm.objects.select_related('farmerID').prefetch_related('farm_devices').all()
+	queryset = Farm.objects.none()  # Required for DRF router registration
 	serializer_class = FarmSerializer
 	permission_classes = [permissions.IsAuthenticated]
+
+	def get_queryset(self):
+		"""Return only farms where the user is a member (via FarmMembership)."""
+		user = self.request.user
+		print("DEBUG: user", user, user.id)
+		print("DEBUG: user.hasattr(farmer_profile)", hasattr(user, 'farmer_profile'))
+		if not hasattr(user, 'farmer_profile'):
+			print("DEBUG: user has no farmer_profile")
+			return Farm.objects.none()
+		farmer = user.farmer_profile
+		print("DEBUG: farmer", farmer, farmer.id)
+		farm_ids = FarmMembership.objects.filter(farmer=farmer).values_list('farm_id', flat=True)
+		print("DEBUG: farm_ids", list(farm_ids))
+		return Farm.objects.filter(farmID__in=farm_ids).prefetch_related('farm_devices', 'memberships')
 
 	@action(detail=True, methods=['get'])
 	def statistics(self, request, pk=None):
@@ -17,6 +34,14 @@ class FarmViewSet(viewsets.ModelViewSet):
 			'total_devices': farm.farm_devices.count(),
 			'active_devices': farm.farm_devices.filter(status=True).count(),
 		}
+		# Add user's role for this farm
+		user = request.user
+		role = None
+		if hasattr(user, 'farmer_profile'):
+			membership = FarmMembership.objects.filter(farmer=user.farmer_profile, farm=farm).first()
+			if membership:
+				role = membership.role
+		data['your_role'] = role
 		return Response(data)
 
 

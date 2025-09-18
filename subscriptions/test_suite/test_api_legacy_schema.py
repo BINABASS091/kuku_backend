@@ -5,6 +5,13 @@ from accounts.models import User, Farmer
 from subscriptions.models import SubscriptionType, Resource, FarmerSubscription, SubscriptionStatus
 
 
+FARM_OWNER_MAP = {
+    1: 2,  # farmID 1 owned by farmerID 2
+    2: 3,  # farmID 2 owned by farmerID 3
+    # ...add all your mappings here
+}
+
+
 class LegacySubscriptionAPITest(TestCase):
     """Smoke tests validating legacy field exposure & core flows."""
 

@@ -10,9 +10,19 @@ class DeviceListSerializer(serializers.ModelSerializer):
         fields = ['deviceID', 'device_id', 'name', 'cell_no', 'picture', 'status']
 
 
+
+# New: FarmMembership serializer
+from .models import FarmMembership
+
+class FarmMembershipSerializer(serializers.ModelSerializer):
+    farmer = FarmerSerializer(read_only=True)
+    class Meta:
+        model = FarmMembership
+        fields = ['id', 'farmer', 'role', 'joined_at']
+
+
 class FarmSerializer(serializers.ModelSerializer):
-    farmerID = serializers.PrimaryKeyRelatedField(queryset=Farmer.objects.all())
-    farmer_details = serializers.SerializerMethodField()
+    memberships = FarmMembershipSerializer(many=True, read_only=True)
     devices = DeviceListSerializer(many=True, read_only=True, source='farm_devices')
     total_devices = serializers.SerializerMethodField()
     active_devices = serializers.SerializerMethodField()
@@ -21,31 +31,31 @@ class FarmSerializer(serializers.ModelSerializer):
     total_birds = serializers.SerializerMethodField()
     last_activity_date = serializers.SerializerMethodField()
     farm_status = serializers.SerializerMethodField()
+    myRole = serializers.SerializerMethodField()
 
     class Meta:
         model = Farm
         fields = [
-            'farmID', 'farmName', 'location', 'farmSize', 'farmerID', 'farmer_details',
+            'farmID', 'farmName', 'location', 'farmSize', 'memberships',
             'devices', 'total_devices', 'active_devices', 'total_batches', 
-            'active_batches', 'total_birds', 'last_activity_date', 'farm_status'
+            'active_batches', 'total_birds', 'last_activity_date', 'farm_status', 'myRole'
         ]
         read_only_fields = ['farmID']
+
+    def get_myRole(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'farmer_profile'):
+            return None
+        farmer = request.user.farmer_profile
+        membership = obj.memberships.filter(farmer=farmer).first()
+        if membership:
+            return membership.role
+        return None
 
     def validate_farmSize(self, value):
         if not value:
             raise serializers.ValidationError("Farm size is required.")
         return value
-
-    def get_farmer_details(self, obj):
-        if hasattr(obj, 'farmerID') and obj.farmerID:
-            return {
-                'id': obj.farmerID.farmerID,
-                'farmerName': obj.farmerID.farmerName,
-                'email': obj.farmerID.email,
-                'phone': obj.farmerID.phone,
-                'username': obj.farmerID.user.username if obj.farmerID.user else None
-            }
-        return None
 
     def get_total_devices(self, obj):
         return obj.farm_devices.count()
@@ -104,7 +114,6 @@ class FarmSerializer(serializers.ModelSerializer):
 
 class DeviceSerializer(serializers.ModelSerializer):
     farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
-    farm_details = serializers.SerializerMethodField()
     last_reading = serializers.SerializerMethodField()
     readings_count = serializers.SerializerMethodField()
 
@@ -116,15 +125,6 @@ class DeviceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['deviceID']
 
-    def get_farm_details(self, obj):
-        if obj.farmID:
-            return {
-                'farmID': obj.farmID.farmID,
-                'farmName': obj.farmID.farmName,
-                'location': obj.farmID.location,
-                'farmer_name': obj.farmID.farmerID.farmerName if obj.farmID.farmerID else None
-            }
-        return None
 
     def get_last_reading(self, obj):
         try:
