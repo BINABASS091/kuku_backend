@@ -79,10 +79,13 @@ class BreedActivitySerializer(serializers.ModelSerializer):
 class ConditionTypeSerializer(serializers.ModelSerializer):
     breed_conditions_count = serializers.SerializerMethodField()
     active_conditions_count = serializers.SerializerMethodField()
+    # Add compatibility fields for frontend
+    name = serializers.CharField(source='conditionName', read_only=True)
+    unit = serializers.CharField(source='condition_unit', read_only=True)
     
     class Meta:
         model = ConditionType
-        fields = ['condition_typeID', 'conditionName', 'condition_unit', 'breed_conditions_count', 'active_conditions_count']
+        fields = ['condition_typeID', 'conditionName', 'condition_unit', 'name', 'unit', 'breed_conditions_count', 'active_conditions_count']
     
     def get_breed_conditions_count(self, obj):
         """Get total breed conditions using this condition type"""

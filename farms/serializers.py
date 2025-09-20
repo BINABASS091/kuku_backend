@@ -129,6 +129,7 @@ class FarmSerializer(serializers.ModelSerializer):
 
 class DeviceSerializer(serializers.ModelSerializer):
     farmID = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
+    farm_details = serializers.SerializerMethodField()
     last_reading = serializers.SerializerMethodField()
     readings_count = serializers.SerializerMethodField()
 
@@ -140,6 +141,18 @@ class DeviceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['deviceID']
 
+    def get_farm_details(self, obj):
+        """Get farm details for the device"""
+        try:
+            if obj.farmID:
+                return {
+                    'id': obj.farmID.farmID,
+                    'name': obj.farmID.name,
+                    'location': obj.farmID.location,
+                }
+            return None
+        except:
+            return None
 
     def get_last_reading(self, obj):
         try:
