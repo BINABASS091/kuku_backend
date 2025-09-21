@@ -146,14 +146,12 @@ class DeviceSerializer(serializers.ModelSerializer):
         try:
             if obj.farmID:
                 return {
-                    'id': obj.farmID.farmID,
-                    'name': obj.farmID.farmName,
+                    'farmID': obj.farmID.id,
                     'location': obj.farmID.location,
-                    'size': obj.farmID.farmSize
+                    'farmName': obj.farmID.farmName,
                 }
             return None
         except:
-            return None
             return None
 
     def get_last_reading(self, obj):
