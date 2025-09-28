@@ -1,0 +1,10 @@
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        gold: '#d4af37', // Gold hex code
+      },
+    },
+  },
+  plugins: [],
+}
