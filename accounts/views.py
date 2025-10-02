@@ -19,7 +19,9 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             # Allow unauthenticated users to self-register
             return [permissions.AllowAny()]
-        if self.action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
+        if self.action == 'list':
+            return [permissions.IsAdminUser()]
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             # Admin-only for management operations
             return [permissions.IsAuthenticated(), IsAdminOrReadOnly()]
         # Default authenticated
